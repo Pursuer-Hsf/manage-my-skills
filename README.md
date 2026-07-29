@@ -15,7 +15,7 @@ Agent 应负责检查 Git、安装或调用 GitHub CLI、解释每一步、创�
 ## 安装到 Codex
 
 ```bash
-git clone https://github.com/OWNER/manage-my-skills.git
+git clone https://github.com/Pursuer-Hsf/manage-my-skills.git
 ln -s "$(pwd)/manage-my-skills/skills/manage-my-skills" ~/.codex/skills/manage-my-skills
 ```
 
