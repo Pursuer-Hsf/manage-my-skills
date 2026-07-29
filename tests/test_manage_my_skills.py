@@ -70,6 +70,18 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(json.loads(state.read_text())["private_repo"], "OWNER/my-skills")
             verify.assert_called_once_with("OWNER/my-skills")
 
+    def test_repo_info_uses_fields_supported_by_older_gh(self):
+        result = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout='{"nameWithOwner":"OWNER/my-skills","isPrivate":true}\n',
+            stderr="",
+        )
+        with mock.patch.object(manager, "run", return_value=result) as execute:
+            info = manager.repo_info("OWNER/my-skills")
+        self.assertTrue(info["isPrivate"])
+        command = execute.call_args.args[0]
+        self.assertEqual(command[-1], "nameWithOwner,isPrivate")
+
     def test_import_preview_does_not_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

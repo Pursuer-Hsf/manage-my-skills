@@ -177,7 +177,7 @@ def require_gh_auth() -> None:
 
 def repo_info(repo: str) -> dict | None:
     result = run(
-        ["gh", "repo", "view", repo, "--json", "nameWithOwner,isPrivate,visibility"],
+        ["gh", "repo", "view", repo, "--json", "nameWithOwner,isPrivate"],
         check=False,
     )
     if result.returncode:
@@ -193,7 +193,7 @@ def verify_private_repo(repo: str) -> dict:
     if not info:
         fail(f"GitHub repository does not exist or is not accessible: {repo}")
     if info.get("isPrivate") is not True:
-        fail(f"Refusing to use non-private repository: {repo} ({info.get('visibility', 'unknown')})")
+        fail(f"Refusing to use non-private repository: {repo}")
     return info
 
 
