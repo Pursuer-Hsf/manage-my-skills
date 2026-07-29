@@ -168,6 +168,13 @@ def require_tool(name: str) -> None:
         fail(f"Required command is not installed or not on PATH: {name}")
 
 
+def add_user_local_bin_to_path(home: Path | None = None) -> None:
+    user_bin = (home or Path.home()) / ".local" / "bin"
+    path_parts = os.environ.get("PATH", "").split(os.pathsep)
+    if user_bin.is_dir() and str(user_bin) not in path_parts:
+        os.environ["PATH"] = str(user_bin) + os.pathsep + os.environ.get("PATH", "")
+
+
 def require_gh_auth() -> None:
     require_tool("gh")
     result = run(["gh", "auth", "status", "--hostname", "github.com"], check=False)
@@ -420,11 +427,38 @@ def command_status(args: argparse.Namespace) -> None:
     say(f"Uncommitted changes: {len(data['changes'] or [])}")
 
 
+def restore_actions(library_dir: Path, target_root: Path) -> tuple[list[tuple[Path, Path]], int]:
+    if not (library_dir / ".git").exists():
+        fail(f"Restore directory is not a Git repository: {library_dir}")
+    skills_dir = library_dir / "skills"
+    if not skills_dir.is_dir():
+        fail(f"Restore directory has no skills directory: {skills_dir}")
+    skills = [
+        skill for skill in sorted(skills_dir.iterdir())
+        if (skill / "SKILL.md").is_file()
+    ]
+    create: list[tuple[Path, Path]] = []
+    already_linked = 0
+    for skill in skills:
+        target = target_root / skill.name
+        if target.exists() or target.is_symlink():
+            if target.is_symlink() and target.resolve() == skill.resolve():
+                already_linked += 1
+                continue
+            fail(f"Restore stopped because target already exists: {target}")
+        create.append((skill, target))
+    return create, already_linked
+
+
 def command_restore(args: argparse.Namespace) -> None:
     library_dir = Path(args.library_dir).expanduser()
     target_root = Path(args.target).expanduser()
     say(f"Plan: clone private repository {args.repo} into {library_dir} if needed")
-    say(f"Plan: link restored skills into {target_root} without replacing existing entries")
+    if library_dir.exists():
+        create, already_linked = restore_actions(library_dir, target_root)
+        say(f"Plan: create {len(create)} skill links; {already_linked} are already correct")
+    else:
+        say(f"Plan: link restored skills into {target_root} after cloning")
     if not args.apply:
         say("Preview only. Re-run with --apply to restore.")
         return
@@ -433,26 +467,12 @@ def command_restore(args: argparse.Namespace) -> None:
     if not library_dir.exists():
         library_dir.parent.mkdir(parents=True, exist_ok=True)
         run(["gh", "repo", "clone", args.repo, str(library_dir)])
-    if not (library_dir / ".git").exists():
-        fail(f"Restore directory is not a Git repository: {library_dir}")
+    create, already_linked = restore_actions(library_dir, target_root)
     target_root.mkdir(parents=True, exist_ok=True)
-    skills = [
-        skill for skill in sorted((library_dir / "skills").iterdir())
-        if (skill / "SKILL.md").is_file()
-    ]
-    for skill in skills:
-        target = target_root / skill.name
-        if target.exists() or target.is_symlink():
-            if target.is_symlink() and target.resolve() == skill.resolve():
-                continue
-            fail(f"Restore stopped because target already exists: {target}")
-    for skill in skills:
-        target = target_root / skill.name
-        if target.is_symlink() and target.resolve() == skill.resolve():
-            continue
+    for skill, target in create:
         target.symlink_to(skill, target_is_directory=True)
     save_state(args.repo, library_dir, Path(args.state_file).expanduser())
-    say("Restore completed without overwriting existing skills.")
+    say(f"Restore completed: created {len(create)} links; {already_linked} were already correct.")
 
 
 def command_doctor(args: argparse.Namespace) -> None:
@@ -559,6 +579,7 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     try:
+        add_user_local_bin_to_path()
         args = parser().parse_args(argv)
         args.func(args)
         return 0

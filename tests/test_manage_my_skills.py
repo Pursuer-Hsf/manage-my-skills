@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,15 @@ def write_skill(path: Path, body: str = "# Example\n") -> None:
 
 
 class ManagerTests(unittest.TestCase):
+    def test_add_user_local_bin_to_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            user_bin = home / ".local" / "bin"
+            user_bin.mkdir(parents=True)
+            with mock.patch.dict(os.environ, {"PATH": "/usr/bin"}):
+                manager.add_user_local_bin_to_path(home)
+                self.assertEqual(os.environ["PATH"], f"{user_bin}:/usr/bin")
+
     def test_scan_discovers_and_classifies_skills(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / ".agents" / "skills"
@@ -176,6 +186,21 @@ class ManagerTests(unittest.TestCase):
                 ])
             self.assertEqual(code, 2)
             self.assertFalse((target / "alpha").is_symlink())
+
+    def test_restore_preview_detects_existing_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            target = base / "target"
+            write_skill(library / "skills" / "alpha")
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            write_skill(target / "alpha")
+            code = manager.main([
+                "restore", "--repo", "OWNER/my-skills",
+                "--library-dir", str(library), "--target", str(target),
+                "--state-file", str(base / "state.json"),
+            ])
+            self.assertEqual(code, 2)
 
     def test_restore_preflight_avoids_partial_links(self):
         with tempfile.TemporaryDirectory() as tmp:
