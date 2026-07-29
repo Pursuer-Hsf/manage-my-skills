@@ -2,9 +2,9 @@
 
 # manage-my-skills
 
-**Agent-first, safety-first management for personal Agent Skills.**
+**Stop losing personal skills between machines. Let your Agent manage the library.**
 
-Keep the manager public. Keep your skills private. Update them independently.
+One private skills library. Every workstation and server. Almost no Git work.
 
 [English](README.md) | [简体中文](docs/README.zh-CN.md) | [日本語](docs/README.ja.md)
 
@@ -15,17 +15,31 @@ Keep the manager public. Keep your skills private. Update them independently.
 
 </div>
 
-`manage-my-skills` is an open-source Agent Skill that helps an AI agent discover, classify, back up, synchronize, and restore user-owned skills. It stores those skills in a **separate private GitHub repository** and puts safety checks in front of every mutation.
+Your best skills should not disappear into old chats, random folders, or one machine you forgot to sync.
 
-This is not a skill marketplace or a bulk installer. It is the governance layer for the skills that are yours.
+`manage-my-skills` turns scattered personal skills into a durable, private capability library. Give the project to an Agent and it handles discovery, classification, GitHub setup, safe backup, restoration, and multi-server synchronization. You keep the valuable knowledge; the Agent handles the Git and filesystem work.
+
+## The Personal Skills Problem
+
+Creating a skill is easy. Keeping a growing personal skills library healthy is not:
+
+- Useful workflows stay buried in chats and project folders instead of becoming reusable skills.
+- Copies on a laptop and several servers quietly drift into different versions.
+- Backups require Git knowledge, repository decisions, credentials, and careful path management.
+- A new machine means rebuilding links and remembering what was installed.
+- Public tools, third-party skills, and private knowledge easily become mixed together.
+
+`manage-my-skills` gives you one private source of truth and lets the Agent do the repetitive work: discover what exists, identify what is yours, preserve it, install it on another machine, and report exactly what changed.
+
+> **Low-friction, not unattended.** “Almost no Git work” means you do not perform routine Git and directory maintenance yourself. The Agent works when invoked, previews mutations, and asks only at security-sensitive checkpoints. It never runs a silent background push.
 
 ## Give This Repository to Your Agent
 
 You do not need to know Git commands. Send the repository URL to an agent that can access your filesystem and GitHub, then say:
 
-> Read `skills/manage-my-skills/SKILL.md` in this repository. Scan my local skills and help me manage my user-owned skills in a separate private GitHub repository. Preview every change first. Tell me when browser login, MFA, or approval is required.
+> Read `skills/manage-my-skills/SKILL.md` in this repository. Scan my local skills, preserve reusable personal workflows, and keep my user-owned skills synchronized through a separate private GitHub repository across my machines and servers. Preview every change first. Tell me when browser login, MFA, or approval is required.
 
-The agent should handle environment checks, GitHub CLI setup, private-repository verification, sensitive-content scanning, installation, and validation. You should only need to approve explicit changes and complete GitHub authentication in the browser.
+The agent should handle environment checks, GitHub CLI setup, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. You should only need to approve explicit changes and complete GitHub authentication in the browser.
 
 ## Why This Project
 
@@ -34,7 +48,9 @@ Popular projects such as [Vercel's skills CLI](https://github.com/vercel-labs/sk
 | Concern | Marketplace / installer | `manage-my-skills` |
 | --- | --- | --- |
 | Discover third-party skills | Primary use case | Classify and reference them |
+| Personal workflows buried in chats and folders | Usually out of scope | Discover and preserve them as durable skills |
 | Back up personal skills privately | Usually external to the tool | Core workflow |
+| Several workstations and servers drift apart | Reinstall or update each target manually | One private source of truth with per-machine restore |
 | GitHub onboarding for non-experts | Varies | Agent-guided |
 | Verify repository is Private | Not always relevant | Required before copy or push |
 | Preview before mutation | Tool-dependent | Default behavior |
@@ -58,13 +74,14 @@ The public repository contains generic code, documentation, tests, and sanitized
 
 - Discover skills in common Codex, shared-agent, and local skill directories.
 - Classify personal, shared-local, managed, and unknown skills.
+- Turn reusable personal workflows into a durable private skills library instead of leaving them scattered.
 - Create a new private GitHub skill library or connect an existing one.
 - Import one user-owned skill only after sensitive-content and symlink checks.
 - Synchronize only allowlisted paths with fast-forward-only Git behavior.
 - Restore skills with a complete no-overwrite preflight and canonical symlinks.
 - Diagnose Git, GitHub authentication, local state, and repository health.
 - Update the public manager without touching the private skill library.
-- Work across multiple machines while each machine keeps its own local state and authentication.
+- Keep one private source of truth synchronized across workstations and multiple servers while each machine retains local state and authentication.
 
 ## Quick Start
 
