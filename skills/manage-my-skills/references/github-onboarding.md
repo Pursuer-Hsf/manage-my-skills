@@ -10,6 +10,8 @@ Use this flow for a user with no GitHub knowledge.
 6. After approval, add `--apply`. The command creates the GitHub repository with `--private` when absent, queries GitHub again, and refuses to continue unless `isPrivate` is true.
 7. Run `status` and explain where the local library and remote backup live.
 
+If the user already has a private repository and local checkout, use `connect` instead of `setup`. Preview first, then apply. `connect` verifies GitHub privacy and the local `skills/` directory, but does not initialize, commit, or push repository files.
+
 The local state file defaults to `~/.config/manage-my-skills/state.json`. It may contain only schema version, repository identifier, local path, and timestamps. Authentication stays with `gh`.
 
 Do not make the user's existing skill repository public. Create a new public manager repository and preserve private history separately.

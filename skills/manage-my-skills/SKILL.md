@@ -18,6 +18,7 @@ Manage the public manager and the user's private skill library as two independen
 
 - Inventory or classification: run `scan`; consult [classification.md](references/classification.md).
 - First private backup: follow [github-onboarding.md](references/github-onboarding.md), then run `setup`.
+- Existing private backup: preview and run `connect`; it must verify privacy and write only local state, never repository files.
 - Add a user-owned skill: run `import` without `--apply`, show the destination, then apply. Run `sync` separately.
 - Check backup state: run `status`; translate Git output into ordinary language.
 - Publish private changes: run `sync` without `--apply`, review the file list, then apply.

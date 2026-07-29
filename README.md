@@ -37,6 +37,7 @@ flowchart LR
 - `doctor`：检查 Git、GitHub 登录、状态文件和私人库。
 - `scan`：发现并初步归类本机 skills。
 - `setup`：创建或连接经过验证的私有 GitHub 仓库。
+- `connect`：连接已有私库，只写本机状态，不改私库文件或历史。
 - `import`：把一个经审查的自有 skill 导入私人库，但不自动推送。
 - `status`：显示备份数量和未同步变化。
 - `sync`：只提交白名单路径，并在无冲突时推送。

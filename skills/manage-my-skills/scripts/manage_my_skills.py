@@ -269,6 +269,23 @@ def command_setup(args: argparse.Namespace) -> None:
     say("Private library is ready and its visibility was verified as Private.")
 
 
+def command_connect(args: argparse.Namespace) -> None:
+    library_dir = Path(args.library_dir).expanduser()
+    say(f"Plan: connect existing private repository {args.repo}")
+    say(f"Plan: record existing local checkout {library_dir} without changing it")
+    if not args.apply:
+        say("Preview only. Re-run with --apply to save the local connection.")
+        return
+    require_gh_auth()
+    verify_private_repo(args.repo)
+    if not (library_dir / ".git").exists():
+        fail(f"Existing library is not a Git repository: {library_dir}")
+    if not (library_dir / "skills").is_dir():
+        fail(f"Existing library has no skills directory: {library_dir / 'skills'}")
+    save_state(args.repo, library_dir, Path(args.state_file).expanduser())
+    say("Existing private library is connected. No repository files were changed.")
+
+
 def iter_text_files(root: Path) -> Iterable[Path]:
     for path in root.rglob("*"):
         if path.is_file() and not path.is_symlink() and path.suffix.lower() in TEXT_SUFFIXES:
@@ -494,6 +511,12 @@ def parser() -> argparse.ArgumentParser:
     setup.add_argument("--library-dir", default=str(Path.home() / ".local" / "share" / "my-skills"))
     setup.add_argument("--apply", action="store_true")
     setup.set_defaults(func=command_setup)
+
+    connect = sub.add_parser("connect", parents=[common], help="Connect an existing private library without changing it")
+    connect.add_argument("--repo", required=True, help="Existing private GitHub repository as OWNER/NAME")
+    connect.add_argument("--library-dir", required=True, help="Existing local Git checkout")
+    connect.add_argument("--apply", action="store_true")
+    connect.set_defaults(func=command_connect)
 
     imp = sub.add_parser("import", parents=[common], help="Copy one user-owned skill into the private library")
     imp.add_argument("source")

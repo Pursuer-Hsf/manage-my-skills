@@ -49,6 +49,27 @@ class ManagerTests(unittest.TestCase):
             self.assertFalse(library.exists())
             self.assertFalse(state.exists())
 
+    def test_connect_existing_library_only_writes_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(library / "skills" / "alpha")
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            before = sorted(str(path.relative_to(library)) for path in library.rglob("*") if ".git" not in path.parts)
+            with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
+                manager, "verify_private_repo", return_value={"isPrivate": True}
+            ) as verify:
+                code = manager.main([
+                    "connect", "--repo", "OWNER/my-skills",
+                    "--library-dir", str(library), "--state-file", str(state), "--apply",
+                ])
+            after = sorted(str(path.relative_to(library)) for path in library.rglob("*") if ".git" not in path.parts)
+            self.assertEqual(code, 0)
+            self.assertEqual(before, after)
+            self.assertEqual(json.loads(state.read_text())["private_repo"], "OWNER/my-skills")
+            verify.assert_called_once_with("OWNER/my-skills")
+
     def test_import_preview_does_not_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
