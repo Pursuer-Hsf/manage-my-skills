@@ -3,7 +3,7 @@
 ## Trust boundaries
 
 - Public manager: code, generic documentation, tests, and sanitized examples only.
-- Private library: user-owned skills and its portable `library.json` manifest.
+- Private library: user-owned skills plus a portable source inventory in `library.json`.
 - Local state: machine-specific paths and repository identifier; no credentials.
 - GitHub authentication: owned by GitHub CLI and the operating system credential store.
 
@@ -14,6 +14,8 @@
 3. Scan text files for private keys, access tokens, access keys, and assigned secrets.
 4. Query GitHub and require `isPrivate: true`.
 5. Restrict staged paths to `library.json` and `skills/`.
+
+Open-source and provider-managed skills stay under their original update authority. Store only portable source metadata in `library.json`; reject credentials, embedded installation commands, and machine-local paths.
 
 Secret scanning is a guardrail, not proof of safety. The Agent must also review hostnames, IP addresses, usernames, internal URLs, proprietary procedures, and personal identifiers before upload.
 

@@ -168,6 +168,184 @@ class ManagerTests(unittest.TestCase):
             verify.assert_called_once_with("OWNER/my-skills")
             self.assertTrue((library / "skills" / "source" / "SKILL.md").is_file())
 
+    def test_track_source_preview_does_not_change_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            code = manager.main([
+                "track-source",
+                "--name", "example-skill",
+                "--kind", "github",
+                "--source", "OWNER/public-skills",
+                "--path", "skills/example-skill",
+                "--ref", "main",
+                "--state-file", str(state),
+            ])
+            self.assertEqual(code, 0)
+            manifest = json.loads((library / "library.json").read_text())
+            self.assertEqual(manifest["sources"], [])
+
+    def test_track_source_apply_records_portable_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
+                manager, "verify_private_repo", return_value={"isPrivate": True}
+            ) as verify:
+                code = manager.main([
+                    "track-source",
+                    "--name", "example-skill",
+                    "--kind", "github",
+                    "--source", "OWNER/public-skills",
+                    "--path", "skills/example-skill",
+                    "--ref", "v1",
+                    "--state-file", str(state),
+                    "--apply",
+                ])
+            self.assertEqual(code, 0)
+            sources = manager.load_library_manifest(library)["sources"]
+            self.assertEqual(sources, [{
+                "name": "example-skill",
+                "kind": "github",
+                "source": "OWNER/public-skills",
+                "path": "skills/example-skill",
+                "ref": "v1",
+            }])
+            verify.assert_called_once_with("OWNER/my-skills")
+
+    def test_track_source_can_preview_and_apply_version_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            manifest = manager.load_library_manifest(library)
+            manifest["sources"] = [{
+                "name": "example-skill",
+                "kind": "github",
+                "source": "OWNER/public-skills",
+                "ref": "v1",
+            }]
+            manager.write_json(library / "library.json", manifest)
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            command = [
+                "track-source",
+                "--name", "example-skill",
+                "--kind", "github",
+                "--source", "OWNER/public-skills",
+                "--ref", "v2",
+                "--state-file", str(state),
+            ]
+            self.assertEqual(manager.main(command), 0)
+            self.assertEqual(manager.load_library_manifest(library)["sources"][0]["ref"], "v1")
+            with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
+                manager, "verify_private_repo", return_value={"isPrivate": True}
+            ):
+                self.assertEqual(manager.main(command + ["--apply"]), 0)
+            self.assertEqual(manager.load_library_manifest(library)["sources"][0]["ref"], "v2")
+
+    def test_track_source_rejects_machine_local_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            code = manager.main([
+                "track-source",
+                "--name", "example-skill",
+                "--kind", "other",
+                "--source", "/local/example-skill",
+                "--state-file", str(state),
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(manager.load_library_manifest(library)["sources"], [])
+
+    def test_track_source_rejects_embedded_credentials(self):
+        with self.assertRaises(manager.ManagerError):
+            manager.validate_source_entry({
+                "name": "example-skill",
+                "kind": "github",
+                "source": "https://user:secret@example.com/skills.git",
+            })
+
+    def test_sources_json_returns_portable_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manifest = manager.load_library_manifest(library)
+            manifest["sources"] = [{
+                "name": "example-skill",
+                "kind": "github",
+                "source": "OWNER/public-skills",
+            }]
+            manager.write_json(library / "library.json", manifest)
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main(["sources", "--state-file", str(state), "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output.getvalue())
+            self.assertEqual(data["sources"][0]["source"], "OWNER/public-skills")
+
+    def test_restore_preview_reports_source_managed_skills(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            target = base / "target"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            write_skill(library / "skills" / "alpha")
+            manifest = manager.load_library_manifest(library)
+            manifest["sources"] = [{
+                "name": "example-skill",
+                "kind": "github",
+                "source": "OWNER/public-skills",
+            }]
+            manager.write_json(library / "library.json", manifest)
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main([
+                    "restore",
+                    "--repo", "OWNER/my-skills",
+                    "--library-dir", str(library),
+                    "--target", str(target),
+                    "--state-file", str(base / "state.json"),
+                ])
+            self.assertEqual(code, 0)
+            self.assertIn("reconcile 1 source-managed skills", output.getvalue())
+            self.assertFalse(target.exists())
+
     def test_restore_refuses_existing_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
@@ -242,12 +420,22 @@ class ManagerTests(unittest.TestCase):
                 "private_repo": "OWNER/my-skills",
                 "library_dir": str(library),
             })
+            manager.write_json(library / "library.json", {
+                "schema_version": 1,
+                "repository": "OWNER/my-skills",
+                "sources": [{
+                    "name": "example-skill",
+                    "kind": "github",
+                    "source": "OWNER/public-skills",
+                }],
+            })
             output = io.StringIO()
             with redirect_stdout(output):
                 code = manager.main(["status", "--state-file", str(state), "--json"])
             self.assertEqual(code, 0)
             data = json.loads(output.getvalue())
             self.assertEqual(data["skills"], ["alpha"])
+            self.assertEqual(data["sources"][0]["name"], "example-skill")
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ HOW_TO_USE_MARKERS = {
         "## How to Use",
         "### First-time setup",
         "### Routine maintenance",
-        "### Agent suggests a new skill",
+        "### Agent suggests capture or update",
         "### Synchronize servers",
         "### Restore on a new machine",
     ],
@@ -25,7 +25,7 @@ HOW_TO_USE_MARKERS = {
         "## 如何使用",
         "### 第一次配置",
         "### 日常维护",
-        "### Agent 主动提醒沉淀",
+        "### Agent 主动提醒沉淀或更新",
         "### 同步多台服务器",
         "### 在新机器恢复",
     ],
@@ -33,9 +33,26 @@ HOW_TO_USE_MARKERS = {
         "## 使い方",
         "### 初回設定",
         "### 日常メンテナンス",
-        "### Agent から skill 化を提案",
+        "### Agent から新規作成・更新を提案",
         "### 複数サーバーを同期",
         "### 新しいマシンで復元",
+    ],
+}
+POSITIONING_MARKERS = {
+    ROOT / "README.md": [
+        "suggest creating or updating a personal skill",
+        "source-installed open-source skills",
+        "install or update open-source skills from their official sources",
+    ],
+    ROOT / "docs" / "README.zh-CN.md": [
+        "主动建议新建或更新个人 skill",
+        "个人 skills 与开源 skills",
+        "开源 skills 按官方来源安装或更新",
+    ],
+    ROOT / "docs" / "README.ja.md": [
+        "新しい個人 skill の作成や既存 skill の更新",
+        "個人 skills とソース管理された公開 skills",
+        "公開 skills は公式ソースから導入・更新",
     ],
 }
 INTERNAL_CLI_MARKERS = [
@@ -75,6 +92,12 @@ class DocumentationTests(unittest.TestCase):
             missing = [marker for marker in markers if marker not in text]
             self.assertEqual(missing, [], f"{document}: missing {missing}")
 
+    def test_all_languages_emphasize_the_full_management_scope(self):
+        for document, markers in POSITIONING_MARKERS.items():
+            text = document.read_text(encoding="utf-8")
+            missing = [marker for marker in markers if marker not in text]
+            self.assertEqual(missing, [], f"{document}: missing {missing}")
+
     def test_user_documentation_does_not_expose_internal_cli_usage(self):
         for document in DOCUMENTS:
             text = document.read_text(encoding="utf-8")
@@ -84,10 +107,12 @@ class DocumentationTests(unittest.TestCase):
     def test_manager_skill_defines_proactive_capture_safely(self):
         text = MANAGER_SKILL.read_text(encoding="utf-8")
         for marker in [
-            "## Suggest Reusable Skill Capture",
-            "Offer once",
-            "Do not create, import, or synchronize anything until the user agrees.",
+            "## Suggest Reusable Skill Capture Or Update",
+            "offer once",
+            "Do not create, update, import, or synchronize anything until the user agrees.",
             "Import and synchronize only after separate approval.",
+            "track-source",
+            "sources",
         ]:
             self.assertIn(marker, text)
 

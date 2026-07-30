@@ -4,9 +4,9 @@
 
 # manage-my-skills
 
-**Stop losing personal skills between machines. Let your Agent manage the library.**
+**Automatically capture better workflows and keep every skill consistent across machines.**
 
-One private skills library across every workstation and server, maintained through conversation.
+Personal skills sync privately. Open-source skills stay installed and updated from their original sources.
 
 [English](README.md) | [简体中文](docs/README.zh-CN.md) | [日本語](docs/README.ja.md)
 
@@ -17,21 +17,23 @@ One private skills library across every workstation and server, maintained throu
 
 </div>
 
-Your best skills should not disappear into old chats, random folders, or one machine you forgot to sync.
+Your best workflows should not disappear into old chats, and your installed skills should not drift between machines.
 
-`manage-my-skills` turns scattered personal skills into a durable, private capability library. Give the project to an Agent and it handles discovery, classification, GitHub setup, safe backup, restoration, and multi-server synchronization. You describe the outcome; the Agent operates the manager.
+`manage-my-skills` lets an Agent detect reusable work, suggest creating or updating a personal skill, and keep both personal and source-installed open-source skills consistent across workstations and servers.
 
 ## The Personal Skills Problem
 
 Creating a skill is easy. Keeping a growing personal skills library healthy is not:
 
 - Useful workflows stay buried in chats and project folders instead of becoming reusable skills.
+- Existing personal skills miss improvements discovered in later tasks.
 - Copies on a laptop and several servers quietly drift into different versions.
+- Open-source skills must be rediscovered, reinstalled, and updated machine by machine.
 - Backups span repositories, credentials, directories, links, and several machines.
 - A new machine means rebuilding links and remembering what was installed.
 - Public tools, third-party skills, and private knowledge easily become mixed together.
 
-`manage-my-skills` gives you one private source of truth and lets the Agent do the repetitive work: discover what exists, identify what is yours, preserve it, install it on another machine, and report exactly what changed.
+`manage-my-skills` gives the Agent one desired skill inventory. Personal skills synchronize as private content; open-source skills synchronize as source records and are installed or updated through their official sources.
 
 > **Agent-managed, human-approved.** The Agent works when asked, previews mutations, and stops for authentication, conflicts, destructive decisions, or sensitive content. It never runs a silent background push.
 
@@ -39,20 +41,20 @@ Creating a skill is easy. Keeping a growing personal skills library healthy is n
 
 Send the repository URL to an Agent that can access your filesystem and GitHub, then say:
 
-> Read `skills/manage-my-skills/SKILL.md` in this repository. Scan my local skills, preserve reusable personal workflows, and keep my user-owned skills synchronized through a separate private GitHub repository across my machines and servers. Preview every change first. Tell me when browser login, MFA, or approval is required.
+> Read `skills/manage-my-skills/SKILL.md` in this repository. Detect reusable workflows that should create or update personal skills. Keep my personal skills privately synchronized and my open-source skills installed from their canonical sources across all machines. Preview every change and tell me when approval is required.
 
 The Agent should handle environment checks, GitHub access, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. It should tell you clearly when authentication or approval is required.
 
 ## Why This Project
 
-Popular projects such as [Vercel's skills CLI](https://github.com/vercel-labs/skills) and [OpenSkills](https://github.com/numman-ali/openskills) focus on discovering and installing skills from public or shared sources. Collections such as [Anthropic Skills](https://github.com/anthropics/skills) and [Awesome Agent Skills](https://github.com/VoltAgent/awesome-agent-skills) publish reusable skills. `manage-my-skills` complements them by managing the private, user-owned side of the lifecycle.
+Popular projects such as [Vercel's skills CLI](https://github.com/vercel-labs/skills) and [OpenSkills](https://github.com/numman-ali/openskills) focus on discovering and installing public skills. `manage-my-skills` complements them with personal-skill preservation and one cross-machine inventory for both personal and source-installed skills.
 
 | Concern | Marketplace / installer | `manage-my-skills` |
 | --- | --- | --- |
-| Discover third-party skills | Primary use case | Classify and reference them |
+| Discover third-party skills | Primary use case | Track their source, path, and version |
 | Personal workflows buried in chats and folders | Usually out of scope | Discover and preserve them as durable skills |
 | Back up personal skills privately | Usually external to the tool | Core workflow |
-| Several workstations and servers drift apart | Reinstall or update each target manually | One private source of truth with per-machine restore |
+| Several workstations and servers drift apart | Reinstall or update each target manually | Reconcile personal and open-source skills on each machine |
 | GitHub onboarding for non-experts | Varies | Agent-guided |
 | Verify repository is Private | Not always relevant | Required before copy or push |
 | Preview before mutation | Tool-dependent | Default behavior |
@@ -65,20 +67,23 @@ Popular projects such as [Vercel's skills CLI](https://github.com/vercel-labs/sk
 flowchart LR
     A["Public: manage-my-skills"] -->|"management logic"| B["Agent"]
     B -->|"discover and classify"| C["Local skill locations"]
-    B -->|"reviewed import / sync / restore"| D["Private: my-skills"]
+    B -->|"personal content + source inventory"| D["Private: my-skills"]
+    B -->|"install / update from official source"| E["Open-source skills"]
     A -. "independent update" .-> A
     D -. "independent synchronization" .-> D
 ```
 
-The public repository contains generic code, documentation, tests, and sanitized examples. The private repository contains user-owned skills. Machine-specific paths live in a local state file. GitHub credentials remain under GitHub CLI or the operating system credential manager.
+The public repository contains the manager. The private repository contains personal skills and a portable inventory of open-source sources. Machine-specific paths and credentials stay local.
 
 ## Features
 
 - Discover skills in common Codex, shared-agent, and local skill directories.
 - Classify personal, shared-local, managed, and unknown skills.
-- Turn reusable personal workflows into a durable private skills library instead of leaving them scattered.
+- Automatically suggest creating a new personal skill or updating an existing one when reusable value appears.
 - Create a new private GitHub skill library or connect an existing one.
 - Import one user-owned skill only after sensitive-content and symlink checks.
+- Track open-source, marketplace, and plugin skills by canonical source, path, and optional version.
+- Reinstall or update source-managed skills through their official mechanism on each machine.
 - Synchronize only allowlisted paths with fast-forward-only Git behavior.
 - Restore skills with a complete no-overwrite preflight and canonical symlinks.
 - Diagnose Git, GitHub authentication, local state, and repository health.
@@ -93,7 +98,7 @@ Send the repository link to your Agent, then use one of these prompts.
 
 ```text
 Read this repository and set up manage-my-skills.
-Scan my local skills and create a private repository for my personal skills.
+Inventory my personal and open-source skills, then create the private management repository.
 Preview first, and tell me when login or approval is needed.
 ```
 
@@ -107,32 +112,35 @@ Check for conflicts first and do not overwrite existing skills.
 ### Routine maintenance
 
 ```text
-Check and maintain my personal skills library.
-Report problems first, then back up and synchronize only after I approve.
+Check and maintain all my skills.
+Suggest personal skills to create or update, and report open-source installation or version drift.
+Make changes only after I approve.
 ```
 
-### Agent suggests a new skill
+### Agent suggests capture or update
 
 After a reusable task, the Agent offers:
 
 ```text
-Agent: This workflow looks reusable. Save it as a personal skill?
-You: Yes. Show me a sanitized preview first.
+Agent: This workflow can improve your existing xxx skill. Update it?
+You: Yes. Show me the sanitized changes first.
 ```
 
-The Agent creates, adds, and synchronizes it only after your approval.
+If no related skill exists, the Agent suggests creating one instead. Nothing changes before approval.
 
 ### Synchronize servers
 
 ```text
-Connect server-a, server-b, and server-c to the same private skills library.
-Check them one at a time, do not overwrite anything, and summarize the results.
+Keep skills consistent across server-a, server-b, and server-c.
+Sync personal skills privately; install or update open-source skills from their official sources.
+Check one machine at a time, do not overwrite anything, and summarize the results.
 ```
 
 ### Restore on a new machine
 
 ```text
-Restore my personal skills from OWNER/my-skills on this machine.
+Restore my managed skills from OWNER/my-skills on this machine.
+Restore personal skills and reinstall or update open-source skills from their recorded sources.
 Check for conflicts first and do not overwrite anything.
 ```
 
@@ -156,6 +164,8 @@ my-skills/
         └── assets/
 ```
 
+`library.json` keeps the portable inventory for source-managed skills. It stores identifiers, paths, and optional refs, never executable installation commands.
+
 Local connection state defaults to:
 
 ```text
@@ -171,7 +181,7 @@ It contains repository identity, local paths, schema version, and timestamps onl
 - Credentials stay in GitHub or the operating system credential store.
 - Sensitive-looking content, unsafe links, conflicts, and existing targets stop the workflow.
 - The manager never overwrites, force-pushes, or automatically merges.
-- Third-party, marketplace, plugin, and bundled skills are references by default, not private copies.
+- Open-source, marketplace, plugin, and bundled skills keep their original update authority; only portable source metadata is synchronized.
 
 Automated checks reduce risk but cannot prove content is safe. See [SECURITY.md](SECURITY.md).
 

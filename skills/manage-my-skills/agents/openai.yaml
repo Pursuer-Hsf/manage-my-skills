@@ -1,6 +1,6 @@
 interface:
   display_name: "Manage My Skills"
-  short_description: "Manage, sync, and preserve personal agent skills"
+  short_description: "Keep personal and open-source skills in sync"
   default_prompt: "Use $manage-my-skills to inspect and safely manage my local skills."
 policy:
   allow_implicit_invocation: true

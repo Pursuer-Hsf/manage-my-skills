@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely inventory, back up, and restore user-owned agent skills."""
+"""Safely inventory, preserve, synchronize, and restore agent skills."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import sys
 import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
 
 
@@ -22,6 +22,8 @@ STATE_HOME = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 STATE_PATH = STATE_HOME / "manage-my-skills" / "state.json"
 MANIFEST_NAME = "library.json"
 ALLOWED_TOP_LEVEL = {MANIFEST_NAME, "skills"}
+SOURCE_KINDS = {"github", "marketplace", "plugin", "other"}
+SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 TEXT_SUFFIXES = {
     "", ".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".ini",
     ".cfg", ".conf", ".py", ".sh", ".zsh", ".bash", ".js", ".ts",
@@ -208,9 +210,69 @@ def library_manifest(repo: str) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "repository": repo,
-        "purpose": "Private backup of user-owned agent skills",
+        "purpose": "Personal skill backup and portable source inventory",
+        "sources": [],
         "updated_at": utc_now(),
     }
+
+
+def validate_source_entry(entry: dict) -> dict:
+    name = str(entry.get("name", ""))
+    kind = str(entry.get("kind", ""))
+    source = str(entry.get("source", ""))
+    path = str(entry.get("path", ""))
+    ref = str(entry.get("ref", ""))
+    if not SKILL_NAME_PATTERN.fullmatch(name):
+        fail(f"Source-managed skill name must use lowercase letters, digits, and hyphens: {name}")
+    if kind not in SOURCE_KINDS:
+        fail(f"Unsupported source kind: {kind}")
+    if not source or len(source) > 500 or any(char.isspace() for char in source):
+        fail("Source must be a portable identifier or URL without whitespace")
+    if source.startswith(("/", "~", ".")):
+        fail("Source must not be a machine-local path")
+    if re.search(r"://[^/@\s]+:[^/@\s]+@", source):
+        fail("Source URLs must not contain embedded credentials")
+    if path:
+        source_path = PurePosixPath(path)
+        if source_path.is_absolute() or ".." in source_path.parts:
+            fail("Source path must stay within the referenced source")
+    if ref and (len(ref) > 200 or any(char.isspace() for char in ref)):
+        fail("Source ref must not contain whitespace")
+    serialized = json.dumps(entry, ensure_ascii=False)
+    for label, pattern in SECRET_PATTERNS.items():
+        if pattern.search(serialized):
+            fail(f"Source entry contains a possible {label}")
+    normalized = {"name": name, "kind": kind, "source": source}
+    if path:
+        normalized["path"] = path
+    if ref:
+        normalized["ref"] = ref
+    return normalized
+
+
+def load_library_manifest(library_dir: Path) -> dict:
+    manifest_path = library_dir / MANIFEST_NAME
+    try:
+        value = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        fail(f"Private library has no {MANIFEST_NAME}: {manifest_path}")
+    except (OSError, json.JSONDecodeError) as exc:
+        fail(f"Cannot read private library manifest {manifest_path}: {exc}")
+    if not isinstance(value, dict):
+        fail(f"Private library manifest must contain a JSON object: {manifest_path}")
+    sources = value.get("sources", [])
+    if not isinstance(sources, list):
+        fail(f"Private library sources must be a JSON list: {manifest_path}")
+    value["sources"] = [validate_source_entry(item) for item in sources if isinstance(item, dict)]
+    if len(value["sources"]) != len(sources):
+        fail(f"Every private library source must be a JSON object: {manifest_path}")
+    return value
+
+
+def source_inventory(library_dir: Path) -> list[dict]:
+    if not (library_dir / MANIFEST_NAME).exists():
+        return []
+    return load_library_manifest(library_dir)["sources"]
 
 
 def ensure_library_files(library_dir: Path, repo: str) -> None:
@@ -363,6 +425,59 @@ def command_import(args: argparse.Namespace) -> None:
     say(f"Imported {target.name}. Run sync to review and publish it to the private repository.")
 
 
+def command_track_source(args: argparse.Namespace) -> None:
+    repo, library_dir, _ = resolved_library(args)
+    entry = validate_source_entry({
+        "name": args.name,
+        "kind": args.kind,
+        "source": args.source,
+        "path": args.path,
+        "ref": args.ref,
+    })
+    manifest = load_library_manifest(library_dir)
+    sources = manifest["sources"]
+    previous = next((item for item in sources if item["name"] == entry["name"]), None)
+    if previous == entry:
+        say(f"Source-managed skill is already tracked: {entry['name']}")
+        return
+    action = "update" if previous else "add"
+    say(f"Plan: {action} source-managed skill {entry['name']}")
+    if previous:
+        say("Current: " + json.dumps(previous, ensure_ascii=False, sort_keys=True))
+    say("Planned: " + json.dumps(entry, ensure_ascii=False, sort_keys=True))
+    say("Plan: keep the manifest change local until an explicit sync")
+    if not args.apply:
+        say("Preview only. Re-run with --apply to update the source inventory.")
+        return
+    if not (library_dir / ".git").exists():
+        fail(f"Private library is not a Git repository: {library_dir}")
+    require_gh_auth()
+    verify_private_repo(repo)
+    manifest["sources"] = sorted(
+        [item for item in sources if item["name"] != entry["name"]] + [entry],
+        key=lambda item: item["name"],
+    )
+    manifest["updated_at"] = utc_now()
+    write_json(library_dir / MANIFEST_NAME, manifest)
+    say(f"Tracked {entry['name']}. Run sync to publish the source inventory.")
+
+
+def command_sources(args: argparse.Namespace) -> None:
+    _, library_dir, _ = resolved_library(args)
+    sources = load_library_manifest(library_dir)["sources"]
+    if args.json:
+        print(json.dumps({"sources": sources}, indent=2, ensure_ascii=False))
+        return
+    say(f"Source-managed skills: {len(sources)}")
+    for item in sources:
+        detail = item["source"]
+        if item.get("path"):
+            detail += f" path={item['path']}"
+        if item.get("ref"):
+            detail += f" ref={item['ref']}"
+        say(f"- {item['name']} [{item['kind']}]: {detail}")
+
+
 def worktree_dirty(library_dir: Path) -> bool:
     return bool(git(library_dir, "status", "--porcelain").stdout.strip())
 
@@ -411,11 +526,15 @@ def command_status(args: argparse.Namespace) -> None:
         "exists": library_dir.exists(),
         "git_repository": (library_dir / ".git").exists(),
         "skills": [],
+        "sources": [],
         "changes": None,
     }
     skills_dir = library_dir / "skills"
     if skills_dir.exists():
         data["skills"] = sorted(path.name for path in skills_dir.iterdir() if (path / "SKILL.md").is_file())
+    manifest = library_dir / MANIFEST_NAME
+    if manifest.exists():
+        data["sources"] = load_library_manifest(library_dir)["sources"]
     if data["git_repository"]:
         data["changes"] = git(library_dir, "status", "--short").stdout.splitlines()
     if args.json:
@@ -424,6 +543,7 @@ def command_status(args: argparse.Namespace) -> None:
     say(f"Private repository: {repo}")
     say(f"Local library: {library_dir} ({'ready' if data['git_repository'] else 'not ready'})")
     say(f"Backed-up skills: {len(data['skills'])}")
+    say(f"Source-managed skills: {len(data['sources'])}")
     say(f"Uncommitted changes: {len(data['changes'] or [])}")
 
 
@@ -456,7 +576,9 @@ def command_restore(args: argparse.Namespace) -> None:
     say(f"Plan: clone private repository {args.repo} into {library_dir} if needed")
     if library_dir.exists():
         create, already_linked = restore_actions(library_dir, target_root)
+        source_count = len(source_inventory(library_dir))
         say(f"Plan: create {len(create)} skill links; {already_linked} are already correct")
+        say(f"Plan: let the Agent reconcile {source_count} source-managed skills")
     else:
         say(f"Plan: link restored skills into {target_root} after cloning")
     if not args.apply:
@@ -468,11 +590,13 @@ def command_restore(args: argparse.Namespace) -> None:
         library_dir.parent.mkdir(parents=True, exist_ok=True)
         run(["gh", "repo", "clone", args.repo, str(library_dir)])
     create, already_linked = restore_actions(library_dir, target_root)
+    source_count = len(source_inventory(library_dir))
     target_root.mkdir(parents=True, exist_ok=True)
     for skill, target in create:
         target.symlink_to(skill, target_is_directory=True)
     save_state(args.repo, library_dir, Path(args.state_file).expanduser())
     say(f"Restore completed: created {len(create)} links; {already_linked} were already correct.")
+    say(f"Source-managed skills to reconcile through their official sources: {source_count}.")
 
 
 def command_doctor(args: argparse.Namespace) -> None:
@@ -545,6 +669,23 @@ def parser() -> argparse.ArgumentParser:
     imp.add_argument("--library-dir")
     imp.add_argument("--apply", action="store_true")
     imp.set_defaults(func=command_import)
+
+    track = sub.add_parser("track-source", parents=[common], help="Track an open-source or provider-managed skill")
+    track.add_argument("--name", required=True)
+    track.add_argument("--kind", required=True, choices=sorted(SOURCE_KINDS))
+    track.add_argument("--source", required=True, help="Portable source identifier or URL")
+    track.add_argument("--path", default="", help="Optional skill path within the source")
+    track.add_argument("--ref", default="", help="Optional branch, tag, or commit")
+    track.add_argument("--repo")
+    track.add_argument("--library-dir")
+    track.add_argument("--apply", action="store_true")
+    track.set_defaults(func=command_track_source)
+
+    sources = sub.add_parser("sources", parents=[common], help="List source-managed skills")
+    sources.add_argument("--repo")
+    sources.add_argument("--library-dir")
+    sources.add_argument("--json", action="store_true")
+    sources.set_defaults(func=command_sources)
 
     sync = sub.add_parser("sync", parents=[common], help="Safely commit and push private library changes")
     sync.add_argument("--repo")
