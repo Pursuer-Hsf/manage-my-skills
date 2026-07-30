@@ -83,67 +83,59 @@ The public repository contains generic code, documentation, tests, and sanitized
 - Update the public manager without touching the private skill library.
 - Keep one private source of truth synchronized across workstations and multiple servers while each machine retains local state and authentication.
 
-## Conversation Guides
+## How to Use
 
-The repository is the instruction manual for the Agent. Describe the result you want; the Agent reads the bundled skill and operates the internal tooling.
+Send the repository link to your Agent, then use one of these prompts.
 
-### Start from zero
+### First-time setup
 
-**You:**
+```text
+Read this repository and set up manage-my-skills.
+Scan my local skills and create a private repository for my personal skills.
+Preview first, and tell me when login or approval is needed.
+```
 
-> Read this repository and install `manage-my-skills`. Scan my local skills, classify which ones are mine, and create a private GitHub repository named `my-skills` for them. Preview the repository, paths, and planned changes first. Tell me when I need to sign in or approve anything.
+### Use an existing library
 
-**The Agent should:** inspect the environment, explain its classification, request GitHub authentication only when needed, verify that the repository is Private, show a complete preview, and wait for your approval before changing anything.
+```text
+Connect manage-my-skills to my private skills repository OWNER/my-skills.
+Check for conflicts first and do not overwrite existing skills.
+```
 
-### Connect an existing private library
+### Routine maintenance
 
-**You:**
+```text
+Check and maintain my personal skills library.
+Report problems first, then back up and synchronize only after I approve.
+```
 
-> My existing private skills repository is `OWNER/my-skills`. Connect this machine to it without rewriting its history or replacing any existing local skill. Show conflicts before making changes.
+### Save this workflow as a skill
 
-**The Agent should:** verify the repository identity and privacy, inspect the existing checkout, record only machine-local configuration, and preflight every skill destination.
+```text
+Turn the reusable parts of this task into a personal skill.
+Show me the sanitized content first, then add it to my private library and synchronize it.
+```
 
-### Maintain the library
+### Synchronize servers
 
-**You:**
-
-> Check my personal skills library. Find local skills that are not backed up, private-library changes that are not synchronized, broken links, and machine drift. Report problems first; do not modify anything yet.
-
-After reviewing the report:
-
-> Back up the reviewed personal skills and synchronize the private library. Stop if you find sensitive content, a conflict, or divergent history.
-
-### Preserve a reusable workflow as a skill
-
-**You:**
-
-> Turn the reusable parts of this task into a personal skill. Show me the proposed skill name, scope, files, and any sensitive information that must be removed. After I approve the content, add it to my private library and synchronize it.
-
-`manage-my-skills` governs storage, validation, and synchronization. The Agent may use an appropriate skill-authoring workflow to create or update the skill before handing it to the manager.
-
-### Synchronize several servers
-
-**You:**
-
-> Connect servers `server-a`, `server-b`, and `server-c` to the same private skills library. Handle them one at a time, preview each machine, and do not overwrite existing skills. Tell me when SSH access or GitHub device authorization is required, then give me a final machine-by-machine report.
-
-Each machine keeps its own local paths and credentials. Cross-machine work happens only when explicitly requested; the manager is not a background deployment service.
+```text
+Connect server-a, server-b, and server-c to the same private skills library.
+Check them one at a time, do not overwrite anything, and summarize the results.
+```
 
 ### Restore on a new machine
 
-**You:**
-
-> Restore my personal skills on this new machine from `OWNER/my-skills`. First inspect the environment and preview every destination. Do not replace any existing file or skill.
-
-**The Agent should:** install or update the public manager independently, authenticate GitHub if necessary, verify the private source, stop on any destination conflict, and report what was restored.
+```text
+Restore my personal skills from OWNER/my-skills on this machine.
+Check for conflicts first and do not overwrite anything.
+```
 
 ### Update only the manager
 
-**You:**
-
-> Update `manage-my-skills`, but do not import, synchronize, or modify anything in my private skills library.
-
-The public manager and private library have independent lifecycles, so updating one must not silently mutate the other.
+```text
+Update manage-my-skills only.
+Do not change or synchronize my private skills library.
+```
 
 ## Private Repository Format
 

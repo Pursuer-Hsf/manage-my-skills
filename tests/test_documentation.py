@@ -9,25 +9,25 @@ DOCUMENTS = [
     ROOT / "docs" / "README.zh-CN.md",
     ROOT / "docs" / "README.ja.md",
 ]
-CONVERSATION_MARKERS = {
+HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
-        "## Conversation Guides",
-        "### Start from zero",
-        "### Maintain the library",
-        "### Synchronize several servers",
+        "## How to Use",
+        "### First-time setup",
+        "### Routine maintenance",
+        "### Synchronize servers",
         "### Restore on a new machine",
     ],
     ROOT / "docs" / "README.zh-CN.md": [
-        "## 对话式使用教程",
-        "### 从零配置",
-        "### 日常检查与维护",
+        "## 如何使用",
+        "### 第一次配置",
+        "### 日常维护",
         "### 同步多台服务器",
         "### 在新机器恢复",
     ],
     ROOT / "docs" / "README.ja.md": [
-        "## 会話形式の使い方",
-        "### ゼロから設定",
-        "### 日常の確認とメンテナンス",
+        "## 使い方",
+        "### 初回設定",
+        "### 日常メンテナンス",
         "### 複数サーバーを同期",
         "### 新しいマシンで復元",
     ],
@@ -56,8 +56,8 @@ class DocumentationTests(unittest.TestCase):
             self.assertIn("简体中文", text)
             self.assertIn("日本語", text)
 
-    def test_all_languages_include_conversation_guides(self):
-        for document, markers in CONVERSATION_MARKERS.items():
+    def test_all_languages_include_how_to_use_examples(self):
+        for document, markers in HOW_TO_USE_MARKERS.items():
             text = document.read_text(encoding="utf-8")
             missing = [marker for marker in markers if marker not in text]
             self.assertEqual(missing, [], f"{document}: missing {missing}")
