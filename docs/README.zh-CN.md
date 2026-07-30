@@ -4,7 +4,7 @@
 
 **个人 skills 越积越多、机器越用越乱？交给 Agent 自动归档、私密沉淀、多服务器同步。**
 
-一个私有 skills 库，覆盖本机和所有服务器。你不用学 Git，只在关键安全节点确认。
+一个私有 skills 库，覆盖本机和所有服务器；日常管理只需要告诉 Agent 你想做什么。
 
 [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
@@ -17,7 +17,7 @@
 
 真正的难点通常不是“不会写 skill”，而是写完之后散落在聊天、项目目录和不同服务器里，时间一久就找不到、不同步、不敢改。
 
-`manage-my-skills` 把这些零散经验沉淀成一个持续成长的**个人私有能力库**。把项目交给 Agent，它负责发现、归类、GitHub 配置、安全备份、恢复和多服务器同步；你保留最有价值的经验，Git 和目录管理交给 Agent。
+`manage-my-skills` 把这些零散经验沉淀成一个持续成长的**个人私有能力库**。把项目交给 Agent，它负责发现、归类、GitHub 配置、安全备份、恢复和多服务器同步；你描述目标，Agent 操作管理器。
 
 ## 它解决的就是这些麻烦
 
@@ -25,21 +25,21 @@
 
 - 好用的流程留在旧聊天和项目目录里，没有真正沉淀成可复用能力。
 - 笔记本和多台服务器各有一份，时间一久版本悄悄漂移。
-- 备份涉及 Git、仓库、凭据、目录和链接，不熟悉 Git 很容易放弃。
+- 备份同时涉及仓库、凭据、目录、链接和多台机器。
 - 换机器或新增服务器时，要重新回忆装过什么、路径在哪里。
 - 公共工具、第三方 skills 和自己的私有经验容易混在一起，更新时互相影响。
 
 `manage-my-skills` 提供一个私有的唯一事实来源，让 Agent 承担重复劳动：盘点现状、判断哪些属于你、持续沉淀、跨机器安装，并清楚报告每次变化。
 
-> **无痛、低打扰，但不是无人监管。** “接近无感”指你不需要亲自处理日常 Git 和目录维护。Agent 在被调用时工作，所有修改先预览，只在登录、授权、冲突等关键节点找你确认；它不会在后台静默 push。
+> **Agent 管理，用户确认。** Agent 在收到请求时工作，所有修改先预览；遇到登录、冲突、破坏性决策或敏感内容时必须停下来确认。它不会在后台静默推送。
 
 ## 把仓库交给 Agent 即可开始
 
-你不需要掌握 Git 命令。把本仓库 URL 发给能够访问本机文件和 GitHub 的 Agent，然后告诉它：
+把本仓库 URL 发给能够访问本机文件和 GitHub 的 Agent，然后告诉它：
 
 > 阅读本仓库中的 `skills/manage-my-skills/SKILL.md`。扫描我的本地 skills，识别并沉淀可复用的个人流程，通过一个独立的私有 GitHub 仓库，让我的自有 skills 在本机和多台服务器之间保持一致。所有修改必须先预览；需要浏览器登录、MFA 或授权时及时告诉我。
 
-Agent 应负责环境检查、GitHub CLI 配置、私库验证、敏感内容扫描、安装、同步和验证。用户只需要批准明确说明的修改，并在浏览器中完成 GitHub 身份验证。
+Agent 应负责环境检查、GitHub 访问、私库验证、敏感内容扫描、安装、同步和验证，并在需要身份验证或批准时清楚说明。
 
 ## 为什么需要这个项目
 
@@ -83,115 +83,67 @@ flowchart LR
 - 只更新公共管理器，不触碰私有 skills。
 - 以一个私库作为唯一事实来源，同步本机和多台服务器；每台机器仍独立保存状态和 GitHub 身份验证。
 
-## 快速开始
+## 对话式使用教程
 
-### 1. 安装到 Codex
+这个仓库就是 Agent 的操作说明。用户只需要描述目标，Agent 会读取内置 skill，并操作内部管理工具。
 
-```bash
-git clone https://github.com/Pursuer-Hsf/manage-my-skills.git \
-  ~/.local/share/manage-my-skills
-mkdir -p ~/.codex/skills
-ln -s ~/.local/share/manage-my-skills/skills/manage-my-skills \
-  ~/.codex/skills/manage-my-skills
-```
+### 从零配置
 
-重启或重新载入 Codex，然后显式调用 `$manage-my-skills`。本 skill 不会默认隐式注入每个任务。
+**你：**
 
-### 2. 让 Agent 创建私有技能库
+> 阅读这个仓库并安装 `manage-my-skills`。扫描本机 skills，判断哪些是我自己的，并为它们创建一个名为 `my-skills` 的私有 GitHub 仓库。先展示仓库、路径和完整修改计划；需要我登录或批准时及时告诉我。
 
-```text
-使用 $manage-my-skills 扫描我的本地 skills，并建立私有 GitHub 备份。
-每项修改先预览，得到确认后再执行。
-```
+**Agent 应该：**检查环境并解释归类结果，只在需要时发起 GitHub 身份验证，确认仓库确实为 Private，展示完整预览，并在修改前等待确认。
 
-### 3. 确认结果
+### 接管已有私库
 
-Agent 应执行 `doctor`、`status` 和 restore 预览。健康状态应包括：GitHub 已登录、私有 Git 仓库已连接、没有异常修改、每个受管理 skill 的链接正确或明确列入待执行计划。
+**你：**
 
-## 手动 CLI
+> 我已有私有 skills 仓库 `用户名/my-skills`。把这台机器接入管理，但不要改写仓库历史，也不要替换任何已有的本地 skill。先报告冲突。
 
-该 skill 主要供 Agent 使用，但所有操作也可以通过仅依赖 Python 标准库的 CLI 执行：
+**Agent 应该：**核对仓库身份与隐私属性，检查现有 checkout，只记录本机配置，并预检每一个 skill 目标位置。
 
-```bash
-MANAGER="$HOME/.codex/skills/manage-my-skills/scripts/manage_my_skills.py"
+### 日常检查与维护
 
-python3 "$MANAGER" doctor
-python3 "$MANAGER" scan
-python3 "$MANAGER" status
-```
+**你：**
 
-| 命令 | 用途 | 默认是否修改数据 |
-| --- | --- | --- |
-| `doctor` | 检查 Git、GitHub 登录、状态和私库健康 | 否 |
-| `scan` | 发现并初步归类本地 skills | 否 |
-| `setup` | 创建或克隆经过验证的私有 skill 库 | 否；需要 `--apply` |
-| `connect` | 连接已有私库，不修改仓库内容 | 否；需要 `--apply` |
-| `import` | 将一个经审查的自有 skill 复制进私库 | 否；需要 `--apply` |
-| `status` | 报告已备份 skills 和工作区变化 | 否 |
-| `sync` | 获取远程、提交白名单内容并安全推送 | 否；需要 `--apply` |
-| `restore` | 预检并创建缺少的 skill 链接 | 否；需要 `--apply` |
-| `update-manager` | 只快进公共管理器 checkout | 否；需要 `--apply` |
+> 检查我的个人 skills 库。找出尚未备份的本地 skills、尚未同步的私库修改、失效链接和机器间差异。先只报告问题，不要修改。
 
-使用 `python3 "$MANAGER" <命令> --help` 查看完整参数。
+看完报告后：
 
-## 常用工作流
+> 备份已经确认的个人 skills，并同步私库。发现敏感内容、冲突或历史分叉时立即停止。
 
-### 创建新的私有技能库
+### 把可复用流程沉淀成 skill
 
-```bash
-python3 "$MANAGER" setup \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills
+**你：**
 
-# 审查预览后再执行：
-python3 "$MANAGER" setup \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+> 把这次任务中可复用的流程沉淀成一个个人 skill。先展示建议的名称、适用范围、文件清单，以及需要删除的敏感信息。我确认内容后，再加入私库并同步。
 
-### 连接已有私库
+`manage-my-skills` 负责保存、校验和同步。创建或修改 skill 内容时，Agent 可以先使用合适的 skill 编写流程，再交给管理器纳入私库。
 
-```bash
-python3 "$MANAGER" connect \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills
+### 同步多台服务器
 
-python3 "$MANAGER" connect \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+**你：**
 
-`connect` 会验证 GitHub 仓库隐私属性并记录本机状态，但不会初始化、提交或推送仓库文件。
+> 将服务器 `server-a`、`server-b`、`server-c` 接入同一个私有 skills 库。逐台检查和预览，不覆盖任何已有 skill。需要 SSH 访问或 GitHub 设备授权时及时告诉我，最后给出逐台结果。
 
-### 导入并同步个人 skill
+每台机器独立保存本机路径和凭据。只有用户明确提出时才执行跨机器操作；本项目不是后台部署服务。
 
-```bash
-python3 "$MANAGER" import ~/path/to/my-skill
-python3 "$MANAGER" import ~/path/to/my-skill --apply
+### 在新机器恢复
 
-python3 "$MANAGER" sync
-python3 "$MANAGER" sync --message "Update my skill" --apply
-```
+**你：**
 
-导入和同步被刻意分成两个步骤。导入绝不隐含推送。
+> 在这台新机器上，从 `用户名/my-skills` 恢复我的个人 skills。先检查环境并预览每个目标位置，不要替换任何已有文件或 skill。
 
-### 在另一台机器恢复
+**Agent 应该：**独立安装或更新公共管理器，必要时发起 GitHub 身份验证，核验私有来源，遇到任何目标冲突都停止，并报告恢复结果。
 
-```bash
-python3 "$MANAGER" restore \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills
+### 只更新管理器
 
-# 只有预检无冲突后才执行：
-python3 "$MANAGER" restore \
-  --repo 你的GitHub用户名/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills \
-  --apply
-```
+**你：**
+
+> 更新 `manage-my-skills`，但不要导入、同步或修改我的私有 skills 库。
+
+公共管理器与私有库拥有独立生命周期，更新其中一个不能静默修改另一个。
 
 ## 私有仓库格式
 
@@ -218,7 +170,7 @@ my-skills/
 
 ## 安全模型
 
-- 默认只预览，修改必须显式添加 `--apply`。
+- 每项修改都必须先预览，并获得用户明确批准。
 - 执行 setup、import、sync 或 restore 前，GitHub 必须报告技能仓库为 Private。
 - 身份验证由 `gh` 或操作系统凭据管理器负责。
 - 导入会拒绝疑似凭据内容和指向 skill 目录外的符号链接。
@@ -232,7 +184,7 @@ my-skills/
 
 ## 兼容性与范围
 
-`manage-my-skills` 使用开放的 [`SKILL.md` 格式](https://agentskills.io/)，自动发现和安装以 Codex 为首要支持目标。其他 Agent 在具备以下条件时，也可以读取 `skills/manage-my-skills/SKILL.md` 并执行 CLI：
+`manage-my-skills` 使用开放的 [`SKILL.md` 格式](https://agentskills.io/)，自动发现和安装以 Codex 为首要支持目标。其他 Agent 在具备以下条件时，也可以读取 `skills/manage-my-skills/SKILL.md` 并操作内置管理器：
 
 - 文件系统访问权限；
 - Python 3.9 或更高版本；
@@ -244,15 +196,13 @@ my-skills/
 
 ## 故障诊断
 
-首先运行：
+告诉 Agent：
 
-```bash
-python3 "$MANAGER" doctor
-```
+> 诊断我的 `manage-my-skills`。检查身份验证、本机状态、仓库隐私属性、链接和同步状态。先报告原因和修复方案，不要直接修改。
 
 常见处理：
 
-- `github-login`：运行 `gh auth login -h github.com`，在浏览器中批准设备登录。
+- GitHub 身份验证：让 Agent 发起浏览器或设备登录，并在收到提示后完成批准。
 - `library`：确认配置的 checkout 仍存在，并包含 `.git/` 和 `skills/`。
 - restore 目标已存在：人工检查目标；管理器不会替换它。
 - Git 历史分叉：先备份，再在管理器之外人工解决。

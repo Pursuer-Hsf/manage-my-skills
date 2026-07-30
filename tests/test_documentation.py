@@ -9,10 +9,34 @@ DOCUMENTS = [
     ROOT / "docs" / "README.zh-CN.md",
     ROOT / "docs" / "README.ja.md",
 ]
-COMMANDS = {
-    "doctor", "scan", "setup", "connect", "import",
-    "status", "sync", "restore", "update-manager",
+CONVERSATION_MARKERS = {
+    ROOT / "README.md": [
+        "## Conversation Guides",
+        "### Start from zero",
+        "### Maintain the library",
+        "### Synchronize several servers",
+        "### Restore on a new machine",
+    ],
+    ROOT / "docs" / "README.zh-CN.md": [
+        "## 对话式使用教程",
+        "### 从零配置",
+        "### 日常检查与维护",
+        "### 同步多台服务器",
+        "### 在新机器恢复",
+    ],
+    ROOT / "docs" / "README.ja.md": [
+        "## 会話形式の使い方",
+        "### ゼロから設定",
+        "### 日常の確認とメンテナンス",
+        "### 複数サーバーを同期",
+        "### 新しいマシンで復元",
+    ],
 }
+INTERNAL_CLI_MARKERS = [
+    'MANAGER="$HOME',
+    'python3 "$MANAGER"',
+    "--apply",
+]
 LOCAL_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 PRIVATE_MARKERS = [
     re.compile(r"/Users/[^/\s]+/"),
@@ -32,11 +56,17 @@ class DocumentationTests(unittest.TestCase):
             self.assertIn("简体中文", text)
             self.assertIn("日本語", text)
 
-    def test_all_languages_cover_the_public_cli(self):
+    def test_all_languages_include_conversation_guides(self):
+        for document, markers in CONVERSATION_MARKERS.items():
+            text = document.read_text(encoding="utf-8")
+            missing = [marker for marker in markers if marker not in text]
+            self.assertEqual(missing, [], f"{document}: missing {missing}")
+
+    def test_user_documentation_does_not_expose_internal_cli_usage(self):
         for document in DOCUMENTS:
             text = document.read_text(encoding="utf-8")
-            missing = sorted(command for command in COMMANDS if f"`{command}`" not in text)
-            self.assertEqual(missing, [], f"{document}: missing {missing}")
+            found = [marker for marker in INTERNAL_CLI_MARKERS if marker in text]
+            self.assertEqual(found, [], f"{document}: exposes internal CLI {found}")
 
     def test_local_markdown_links_resolve(self):
         for document in DOCUMENTS:

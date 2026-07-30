@@ -4,7 +4,7 @@
 
 **増え続ける個人 skills を Agent に任せて整理、蓄積、複数サーバーで同期。**
 
-1 つの非公開 skills ライブラリを、すべての端末とサーバーへ。日常の Git 操作はほぼ不要です。
+1 つの非公開 skills ライブラリを、すべての端末とサーバーへ。日常管理は Agent との会話で進みます。
 
 [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
@@ -17,7 +17,7 @@
 
 本当の難しさは skill を書くことではなく、チャット、プロジェクト、複数サーバーに散らばった skills を長期的に育て続けることです。
 
-`manage-my-skills` は、散在する個人 skills を継続的に成長する**非公開の個人能力ライブラリ**へ変えます。Agent が検出、分類、GitHub 設定、安全なバックアップ、復元、複数サーバー同期を担当し、ユーザーは価値ある知識に集中できます。
+`manage-my-skills` は、散在する個人 skills を継続的に成長する**非公開の個人能力ライブラリ**へ変えます。Agent が検出、分類、GitHub 設定、安全なバックアップ、復元、複数サーバー同期を担当します。ユーザーが目的を伝え、Agent がマネージャーを操作します。
 
 ## 個人 skills 管理の悩み
 
@@ -25,21 +25,21 @@ skill を 1 つ作るのは簡単でも、増え続ける個人ライブラリ�
 
 - 有用な手順が古いチャットやプロジェクトに埋もれ、再利用可能な skill として残らない。
 - ノート PC と複数サーバーのコピーが、気付かないうちに別バージョンになる。
-- バックアップには Git、リポジトリ、認証情報、パス、リンクの知識が必要。
+- バックアップはリポジトリ、認証情報、パス、リンク、複数マシンにまたがる。
 - 新しいマシンでは、何をどこにインストールしたかを思い出して再構築する必要がある。
 - 公開ツール、サードパーティ skills、個人の非公開知識が混在しやすい。
 
 `manage-my-skills` は非公開の単一ソースを用意し、現状把握、所有物の判定、知識の蓄積、別マシンへのインストール、変更報告という反復作業を Agent に任せます。
 
-> **低負担ですが、無人運転ではありません。** 日常的な Git とディレクトリ操作をユーザーが行わなくてよい、という意味です。Agent は呼び出されたときに動作し、変更を先にプレビューして、認証や競合など重要な場面だけ確認を求めます。バックグラウンドで無断 push は行いません。
+> **Agent が管理し、ユーザーが承認します。** Agent は依頼されたときに動作し、変更を先にプレビューします。認証、競合、破壊的な判断、機密情報が関わる場合は停止して確認します。バックグラウンドで無断 push は行いません。
 
 ## このリポジトリを Agent に渡すだけで開始
 
-Git コマンドを覚える必要はありません。ファイルシステムと GitHub にアクセスできる Agent にリポジトリ URL を渡し、次のように依頼します。
+ファイルシステムと GitHub にアクセスできる Agent にリポジトリ URL を渡し、次のように依頼します。
 
 > このリポジトリの `skills/manage-my-skills/SKILL.md` を読んでください。ローカル skills をスキャンし、再利用可能な個人ワークフローを蓄積して、別の非公開 GitHub リポジトリを通じて端末と複数サーバーのユーザー所有 skills を同期してください。変更は必ず先にプレビューし、ブラウザログイン、MFA、承認が必要になったら知らせてください。
 
-Agent は環境確認、GitHub CLI の設定、非公開リポジトリの検証、機密情報のスキャン、インストール、同期、検証を担当します。ユーザーが行うのは、明示された変更の承認とブラウザでの GitHub 認証だけです。
+Agent は環境確認、GitHub アクセス、非公開リポジトリの検証、機密情報のスキャン、インストール、同期、検証を担当し、認証や承認が必要な場合は明確に知らせます。
 
 ## このプロジェクトの役割
 
@@ -83,116 +83,67 @@ flowchart LR
 - 非公開 skills に触れず、公開マネージャーだけを更新。
 - 1 つの非公開ソースを端末と複数サーバーで同期しつつ、各マシンは独自の状態と認証を保持。
 
-## クイックスタート
+## 会話形式の使い方
 
-### 1. Codex にインストール
+このリポジトリが Agent の操作説明書です。目的を伝えると、Agent が同梱 skill を読み、内部の管理ツールを操作します。
 
-```bash
-git clone https://github.com/Pursuer-Hsf/manage-my-skills.git \
-  ~/.local/share/manage-my-skills
-mkdir -p ~/.codex/skills
-ln -s ~/.local/share/manage-my-skills/skills/manage-my-skills \
-  ~/.codex/skills/manage-my-skills
-```
+### ゼロから設定
 
-Codex を再起動または再読み込みし、`$manage-my-skills` を明示的に呼び出します。この skill は暗黙呼び出しを有効にしません。
+**あなた:**
 
-### 2. Agent に非公開ライブラリを設定させる
+> このリポジトリを読んで `manage-my-skills` をインストールしてください。ローカル skills をスキャンし、自分のものを分類して、それらを保存する `my-skills` という非公開 GitHub リポジトリを作成してください。リポジトリ、パス、変更計画を先に表示し、ログインや承認が必要になったら知らせてください。
 
-```text
-$manage-my-skills を使ってローカル skills をスキャンし、
-非公開 GitHub バックアップを設定してください。
-すべての変更を先にプレビューし、適用前に確認してください。
-```
-
-### 3. 結果を確認
-
-Agent は `doctor`、`status`、restore のプレビューを実行します。正常な状態では、GitHub 認証済み、Git リポジトリ接続済み、予期しない変更なし、各管理対象 skill のリンクが正しい、または作成予定として明示されます。
-
-## 手動 CLI
-
-この skill は Agent 向けですが、すべての操作を Python 標準ライブラリだけで動く CLI から実行できます。
-
-```bash
-MANAGER="$HOME/.codex/skills/manage-my-skills/scripts/manage_my_skills.py"
-
-python3 "$MANAGER" doctor
-python3 "$MANAGER" scan
-python3 "$MANAGER" status
-```
-
-| コマンド | 目的 | デフォルトで変更するか |
-| --- | --- | --- |
-| `doctor` | Git、GitHub ログイン、状態、ライブラリを確認 | いいえ |
-| `scan` | ローカル skills を検出・分類 | いいえ |
-| `setup` | 検証済み非公開ライブラリを作成・clone | いいえ。`--apply` が必要 |
-| `connect` | 既存 checkout を変更せず接続 | いいえ。`--apply` が必要 |
-| `import` | レビュー済みの所有 skill をライブラリへコピー | いいえ。`--apply` が必要 |
-| `status` | バックアップとワークツリー変更を表示 | いいえ |
-| `sync` | fetch、許可済み内容の commit、安全な push | いいえ。`--apply` が必要 |
-| `restore` | 事前確認し、不足する skill リンクを作成 | いいえ。`--apply` が必要 |
-| `update-manager` | 公開マネージャーだけを fast-forward | いいえ。`--apply` が必要 |
-
-完全な引数は `python3 "$MANAGER" <command> --help` で確認できます。
-
-## よく使うワークフロー
-
-### 新しい非公開ライブラリを作成
-
-```bash
-python3 "$MANAGER" setup \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills
-
-# プレビュー確認後に適用
-python3 "$MANAGER" setup \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+**Agent が行うこと:** 環境を確認して分類結果を説明し、必要な場合だけ GitHub 認証を開始します。リポジトリが Private であることを検証し、完全なプレビューを示してから承認を待ちます。
 
 ### 既存の非公開ライブラリへ接続
 
-```bash
-python3 "$MANAGER" connect \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills
+**あなた:**
 
-python3 "$MANAGER" connect \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+> 既存の非公開 skills リポジトリは `OWNER/my-skills` です。このマシンを接続してください。履歴を書き換えず、既存のローカル skill を置き換えず、競合は先に報告してください。
 
-`connect` は GitHub 上の Private 設定を検証し、ローカル状態だけを記録します。リポジトリの初期化、commit、push は行いません。
+**Agent が行うこと:** リポジトリの識別子と Private 設定を検証し、既存 checkout を確認します。マシン固有の設定だけを記録し、すべての配置先を事前確認します。
 
-### 個人 skill を import して同期
+### 日常の確認とメンテナンス
 
-```bash
-python3 "$MANAGER" import ~/path/to/my-skill
-python3 "$MANAGER" import ~/path/to/my-skill --apply
+**あなた:**
 
-python3 "$MANAGER" sync
-python3 "$MANAGER" sync --message "Update my skill" --apply
-```
+> 個人 skills ライブラリを確認してください。未バックアップのローカル skills、未同期の変更、壊れたリンク、マシン間の差異を探してください。まず問題だけを報告し、まだ変更しないでください。
 
-import と sync は意図的に分離されています。import が自動的に push することはありません。
+報告を確認した後:
 
-### 別マシンで復元
+> 確認済みの個人 skills をバックアップして、非公開ライブラリを同期してください。機密情報、競合、履歴の分岐が見つかったら停止してください。
 
-```bash
-python3 "$MANAGER" restore \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills
+### 再利用可能な手順を skill として蓄積
 
-# 競合がないことを確認してから適用
-python3 "$MANAGER" restore \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills \
-  --apply
-```
+**あなた:**
+
+> この作業の再利用可能な部分を個人 skill にしてください。推奨する名前、対象範囲、ファイル一覧、削除すべき機密情報を先に示してください。内容を承認した後、非公開ライブラリへ追加して同期してください。
+
+`manage-my-skills` は保存、検証、同期を担当します。skill の作成や更新には、Agent が適切な skill 作成フローを使ってからマネージャーへ渡すことがあります。
+
+### 複数サーバーを同期
+
+**あなた:**
+
+> `server-a`、`server-b`、`server-c` を同じ非公開 skills ライブラリへ接続してください。1 台ずつ確認・プレビューし、既存 skill は上書きしないでください。SSH アクセスや GitHub デバイス認証が必要なら知らせ、最後にマシン別の結果を報告してください。
+
+各マシンはローカルパスと認証情報を個別に保持します。複数マシンの操作は明示的に依頼された場合だけ行い、このプロジェクトがバックグラウンド配備を行うことはありません。
+
+### 新しいマシンで復元
+
+**あなた:**
+
+> この新しいマシンへ `OWNER/my-skills` から個人 skills を復元してください。先に環境とすべての配置先を確認し、既存ファイルや skill は置き換えないでください。
+
+**Agent が行うこと:** 公開マネージャーを独立してインストールまたは更新し、必要なら GitHub 認証を開始します。非公開ソースを検証し、配置先の競合があれば停止して、復元結果を報告します。
+
+### マネージャーだけを更新
+
+**あなた:**
+
+> `manage-my-skills` を更新してください。ただし、非公開 skills ライブラリの追加、同期、変更は行わないでください。
+
+公開マネージャーと非公開ライブラリは独立したライフサイクルを持ち、一方の更新が他方を暗黙に変更してはいけません。
 
 ## 非公開リポジトリ形式
 
@@ -219,7 +170,7 @@ my-skills/
 
 ## セキュリティモデル
 
-- デフォルトはプレビュー。変更には明示的な `--apply` が必要。
+- すべての変更を事前にプレビューし、ユーザーの明示的な承認を得ます。
 - setup、import、sync、restore の前に GitHub がリポジトリを Private と報告する必要があります。
 - 認証は `gh` または OS の認証情報ストアが管理します。
 - import は認証情報らしい内容と、skill 外へ出る symlink を拒否します。
@@ -233,7 +184,7 @@ my-skills/
 
 ## 互換性とスコープ
 
-`manage-my-skills` は公開 [`SKILL.md` 形式](https://agentskills.io/) を使用し、自動検出・インストールは Codex を第一対象とします。他の Agent でも、次の条件を満たせば `skills/manage-my-skills/SKILL.md` を読み、CLI を実行できます。
+`manage-my-skills` は公開 [`SKILL.md` 形式](https://agentskills.io/) を使用し、自動検出・インストールは Codex を第一対象とします。他の Agent でも、次の条件を満たせば `skills/manage-my-skills/SKILL.md` を読み、同梱マネージャーを操作できます。
 
 - ファイルシステムへのアクセス
 - Python 3.9 以降
@@ -245,13 +196,11 @@ my-skills/
 
 ## トラブルシューティング
 
-最初に次を実行します。
+Agent に次のように依頼します。
 
-```bash
-python3 "$MANAGER" doctor
-```
+> `manage-my-skills` を診断してください。認証、ローカル状態、リポジトリの Private 設定、リンク、同期状態を確認し、変更前に原因と修復案を報告してください。
 
-- `github-login`: `gh auth login -h github.com` を実行し、ブラウザまたはデバイスフローを承認します。
+- GitHub 認証: Agent にブラウザまたはデバイスフローを開始させ、表示されたときに承認します。
 - `library`: checkout が存在し、`.git/` と `skills/` を含むことを確認します。
 - restore ターゲットが既存: 手動で確認してください。マネージャーは置き換えません。
 - Git 履歴が分岐: バックアップ後、マネージャー外で手動解決します。

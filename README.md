@@ -4,7 +4,7 @@
 
 **Stop losing personal skills between machines. Let your Agent manage the library.**
 
-One private skills library. Every workstation and server. Almost no Git work.
+One private skills library across every workstation and server, maintained through conversation.
 
 [English](README.md) | [简体中文](docs/README.zh-CN.md) | [日本語](docs/README.ja.md)
 
@@ -17,7 +17,7 @@ One private skills library. Every workstation and server. Almost no Git work.
 
 Your best skills should not disappear into old chats, random folders, or one machine you forgot to sync.
 
-`manage-my-skills` turns scattered personal skills into a durable, private capability library. Give the project to an Agent and it handles discovery, classification, GitHub setup, safe backup, restoration, and multi-server synchronization. You keep the valuable knowledge; the Agent handles the Git and filesystem work.
+`manage-my-skills` turns scattered personal skills into a durable, private capability library. Give the project to an Agent and it handles discovery, classification, GitHub setup, safe backup, restoration, and multi-server synchronization. You describe the outcome; the Agent operates the manager.
 
 ## The Personal Skills Problem
 
@@ -25,21 +25,21 @@ Creating a skill is easy. Keeping a growing personal skills library healthy is n
 
 - Useful workflows stay buried in chats and project folders instead of becoming reusable skills.
 - Copies on a laptop and several servers quietly drift into different versions.
-- Backups require Git knowledge, repository decisions, credentials, and careful path management.
+- Backups span repositories, credentials, directories, links, and several machines.
 - A new machine means rebuilding links and remembering what was installed.
 - Public tools, third-party skills, and private knowledge easily become mixed together.
 
 `manage-my-skills` gives you one private source of truth and lets the Agent do the repetitive work: discover what exists, identify what is yours, preserve it, install it on another machine, and report exactly what changed.
 
-> **Low-friction, not unattended.** “Almost no Git work” means you do not perform routine Git and directory maintenance yourself. The Agent works when invoked, previews mutations, and asks only at security-sensitive checkpoints. It never runs a silent background push.
+> **Agent-managed, human-approved.** The Agent works when asked, previews mutations, and stops for authentication, conflicts, destructive decisions, or sensitive content. It never runs a silent background push.
 
 ## Give This Repository to Your Agent
 
-You do not need to know Git commands. Send the repository URL to an agent that can access your filesystem and GitHub, then say:
+Send the repository URL to an Agent that can access your filesystem and GitHub, then say:
 
 > Read `skills/manage-my-skills/SKILL.md` in this repository. Scan my local skills, preserve reusable personal workflows, and keep my user-owned skills synchronized through a separate private GitHub repository across my machines and servers. Preview every change first. Tell me when browser login, MFA, or approval is required.
 
-The agent should handle environment checks, GitHub CLI setup, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. You should only need to approve explicit changes and complete GitHub authentication in the browser.
+The Agent should handle environment checks, GitHub access, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. It should tell you clearly when authentication or approval is required.
 
 ## Why This Project
 
@@ -83,115 +83,67 @@ The public repository contains generic code, documentation, tests, and sanitized
 - Update the public manager without touching the private skill library.
 - Keep one private source of truth synchronized across workstations and multiple servers while each machine retains local state and authentication.
 
-## Quick Start
+## Conversation Guides
 
-### 1. Install the manager in Codex
+The repository is the instruction manual for the Agent. Describe the result you want; the Agent reads the bundled skill and operates the internal tooling.
 
-```bash
-git clone https://github.com/Pursuer-Hsf/manage-my-skills.git \
-  ~/.local/share/manage-my-skills
-mkdir -p ~/.codex/skills
-ln -s ~/.local/share/manage-my-skills/skills/manage-my-skills \
-  ~/.codex/skills/manage-my-skills
-```
+### Start from zero
 
-Restart or reload Codex, then invoke `$manage-my-skills` explicitly. The skill does not opt into implicit invocation.
+**You:**
 
-### 2. Ask the Agent to set up your private library
+> Read this repository and install `manage-my-skills`. Scan my local skills, classify which ones are mine, and create a private GitHub repository named `my-skills` for them. Preview the repository, paths, and planned changes first. Tell me when I need to sign in or approve anything.
 
-```text
-Use $manage-my-skills to scan my local skills and set up a private GitHub backup.
-Preview every change and ask before applying it.
-```
-
-### 3. Confirm the result
-
-The agent should run `doctor`, `status`, and a restore preview. A healthy installation reports authenticated GitHub access, a connected Git repository, no unexpected changes, and every managed skill link either correct or explicitly planned.
-
-## Manual CLI
-
-The skill is designed for Agent use, but every operation is also available as a standard-library-only Python CLI:
-
-```bash
-MANAGER="$HOME/.codex/skills/manage-my-skills/scripts/manage_my_skills.py"
-
-python3 "$MANAGER" doctor
-python3 "$MANAGER" scan
-python3 "$MANAGER" status
-```
-
-| Command | Purpose | Mutates by default? |
-| --- | --- | --- |
-| `doctor` | Check Git, GitHub login, state, and library health | No |
-| `scan` | Discover and classify local skills | No |
-| `setup` | Create or clone a verified private skill library | No; requires `--apply` |
-| `connect` | Connect an existing private checkout without changing it | No; requires `--apply` |
-| `import` | Copy one reviewed user-owned skill into the private library | No; requires `--apply` |
-| `status` | Report backed-up skills and working-tree changes | No |
-| `sync` | Fetch, commit allowlisted content, and push safely | No; requires `--apply` |
-| `restore` | Preflight and create missing skill links | No; requires `--apply` |
-| `update-manager` | Fast-forward only the public manager checkout | No; requires `--apply` |
-
-Run `python3 "$MANAGER" <command> --help` for complete arguments.
-
-## Common Workflows
-
-### Create a new private library
-
-```bash
-python3 "$MANAGER" setup \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills
-
-# Review the preview, then apply:
-python3 "$MANAGER" setup \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+**The Agent should:** inspect the environment, explain its classification, request GitHub authentication only when needed, verify that the repository is Private, show a complete preview, and wait for your approval before changing anything.
 
 ### Connect an existing private library
 
-```bash
-python3 "$MANAGER" connect \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills
+**You:**
 
-python3 "$MANAGER" connect \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --apply
-```
+> My existing private skills repository is `OWNER/my-skills`. Connect this machine to it without rewriting its history or replacing any existing local skill. Show conflicts before making changes.
 
-`connect` verifies GitHub privacy and records local state. It does not initialize, commit, or push repository files.
+**The Agent should:** verify the repository identity and privacy, inspect the existing checkout, record only machine-local configuration, and preflight every skill destination.
 
-### Import and synchronize a personal skill
+### Maintain the library
 
-```bash
-python3 "$MANAGER" import ~/path/to/my-skill
-python3 "$MANAGER" import ~/path/to/my-skill --apply
+**You:**
 
-python3 "$MANAGER" sync
-python3 "$MANAGER" sync --message "Update my skill" --apply
-```
+> Check my personal skills library. Find local skills that are not backed up, private-library changes that are not synchronized, broken links, and machine drift. Report problems first; do not modify anything yet.
 
-Import and sync are deliberately separate. Import never implies a push.
+After reviewing the report:
 
-### Restore on another machine
+> Back up the reviewed personal skills and synchronize the private library. Stop if you find sensitive content, a conflict, or divergent history.
 
-```bash
-python3 "$MANAGER" restore \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills
+### Preserve a reusable workflow as a skill
 
-# Apply only after the preflight reports no conflicts:
-python3 "$MANAGER" restore \
-  --repo YOUR_GITHUB_USER/my-skills \
-  --library-dir ~/.local/share/my-skills \
-  --target ~/.codex/skills \
-  --apply
-```
+**You:**
+
+> Turn the reusable parts of this task into a personal skill. Show me the proposed skill name, scope, files, and any sensitive information that must be removed. After I approve the content, add it to my private library and synchronize it.
+
+`manage-my-skills` governs storage, validation, and synchronization. The Agent may use an appropriate skill-authoring workflow to create or update the skill before handing it to the manager.
+
+### Synchronize several servers
+
+**You:**
+
+> Connect servers `server-a`, `server-b`, and `server-c` to the same private skills library. Handle them one at a time, preview each machine, and do not overwrite existing skills. Tell me when SSH access or GitHub device authorization is required, then give me a final machine-by-machine report.
+
+Each machine keeps its own local paths and credentials. Cross-machine work happens only when explicitly requested; the manager is not a background deployment service.
+
+### Restore on a new machine
+
+**You:**
+
+> Restore my personal skills on this new machine from `OWNER/my-skills`. First inspect the environment and preview every destination. Do not replace any existing file or skill.
+
+**The Agent should:** install or update the public manager independently, authenticate GitHub if necessary, verify the private source, stop on any destination conflict, and report what was restored.
+
+### Update only the manager
+
+**You:**
+
+> Update `manage-my-skills`, but do not import, synchronize, or modify anything in my private skills library.
+
+The public manager and private library have independent lifecycles, so updating one must not silently mutate the other.
 
 ## Private Repository Format
 
@@ -218,7 +170,7 @@ Do not keep private skills inside this public repository and hide them with `.gi
 
 ## Safety Model
 
-- Preview is the default; mutation requires explicit `--apply`.
+- Every mutation is previewed and requires explicit user approval.
 - GitHub must report the skill repository as Private before setup, import, sync, or restore.
 - Authentication belongs to `gh` or the operating system credential store.
 - Imports reject secret-like content and symlinks that escape the skill directory.
@@ -232,7 +184,7 @@ Pattern matching cannot prove that content is safe. Review internal hosts, perso
 
 ## Compatibility and Scope
 
-`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first for automatic discovery and installation. Other agents can use it by reading `skills/manage-my-skills/SKILL.md` and running the CLI when they provide:
+`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first for automatic discovery and installation. Other Agents can use it by reading `skills/manage-my-skills/SKILL.md` and operating the bundled manager when they provide:
 
 - filesystem access;
 - Python 3.9 or newer;
@@ -244,15 +196,13 @@ Automatic invocation, skill search paths, hooks, and symlink support differ by a
 
 ## Troubleshooting
 
-Start with:
+Ask the Agent:
 
-```bash
-python3 "$MANAGER" doctor
-```
+> Diagnose my `manage-my-skills` installation. Check authentication, local state, repository privacy, links, and synchronization status. Report the cause and proposed repair before changing anything.
 
 Common actions:
 
-- `github-login`: run `gh auth login -h github.com` and approve the browser/device flow.
+- GitHub authentication: let the Agent start the browser or device flow, then approve it when prompted.
 - `library`: verify the configured checkout still exists and contains `.git/` and `skills/`.
 - Existing restore target: inspect it manually; the manager will not replace it.
 - Diverged Git history: resolve it outside the manager after making a backup.
