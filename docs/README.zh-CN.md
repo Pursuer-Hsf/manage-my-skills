@@ -158,73 +158,38 @@ my-skills/
 
 其中只能包含仓库标识、本机路径、schema 版本和时间戳，不能包含凭据。
 
-不要把私人 skills 放进本公共仓库后再用 `.gitignore` 隐藏。被忽略的文件不会跨机器同步，还可能被 `git clean -xfd` 等命令删除。
-
 ## 安全模型
 
-- 每项修改都必须先预览，并获得用户明确批准。
-- 执行 setup、import、sync 或 restore 前，GitHub 必须报告技能仓库为 Private。
-- 身份验证由 `gh` 或操作系统凭据管理器负责。
-- 导入会拒绝疑似凭据内容和指向 skill 目录外的符号链接。
-- 同步只暂存 `library.json` 和 `skills/`，绝不执行 `git add -A`。
-- 拉取和管理器更新仅允许 fast-forward。
-- restore 在创建任何链接前检查全部目标。
-- 目标已存在、Git 历史分叉、冲突、force push 或自动合并需求都会让流程停止。
+- 修改前必须预览，并获得明确批准。
+- skills 仓库必须验证为 Private。
+- 凭据由 GitHub 或操作系统凭据管理器保存。
+- 疑似敏感内容、危险链接、冲突和已有目标都会让流程停止。
+- 管理器不会覆盖、强制推送或自动合并。
 - 第三方、市场、插件和系统内置 skills 默认只记录来源，不复制到私库。
 
-模式匹配无法证明内容绝对安全。上传前仍需审查内部主机、个人身份信息、专有流程、许可证和机密数据。完整策略见 [SECURITY.md](../SECURITY.md)。
+自动检查只能降低风险，不能证明内容绝对安全。完整策略见 [SECURITY.md](../SECURITY.md)。
 
 ## 兼容性与范围
 
-`manage-my-skills` 使用开放的 [`SKILL.md` 格式](https://agentskills.io/)，自动发现和安装以 Codex 为首要支持目标。其他 Agent 在具备以下条件时，也可以读取 `skills/manage-my-skills/SKILL.md` 并操作内置管理器：
-
-- 文件系统访问权限；
-- Python 3.9 或更高版本；
-- Git；
-- 用于验证私库的 GitHub CLI；
-- 网络和 GitHub 权限。
-
-不同 Agent 的自动调用、skill 搜索路径、hooks 和符号链接支持并不相同。本项目不会宣称在所有平台上拥有完全一致的自动行为。
+`manage-my-skills` 使用开放的 [`SKILL.md` 格式](https://agentskills.io/)，优先支持 Codex。其他能够访问文件系统的 Agent，在具备 Python 3.9+、Git 和 GitHub 访问权限时也可以使用。不同 Agent 的发现路径和自动行为可能不同。
 
 ## 故障诊断
 
-告诉 Agent：
-
-> 诊断我的 `manage-my-skills`。检查身份验证、本机状态、仓库隐私属性、链接和同步状态。先报告原因和修复方案，不要直接修改。
-
-常见处理：
-
-- GitHub 身份验证：让 Agent 发起浏览器或设备登录，并在收到提示后完成批准。
-- `library`：确认配置的 checkout 仍存在，并包含 `.git/` 和 `skills/`。
-- restore 目标已存在：人工检查目标；管理器不会替换它。
-- Git 历史分叉：先备份，再在管理器之外人工解决。
-- Agent 看不到 skill：检查符号链接，并重启或重新载入 Agent 进程。
+```text
+诊断 manage-my-skills。先报告原因和修复方案，不要直接修改。
+```
 
 ## 开发
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile skills/manage-my-skills/scripts/manage_my_skills.py
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/manage-my-skills
 ```
 
-运行时不依赖第三方 Python 包。外部 skill 校验器在开发验证时可能需要 `PyYAML`。
-
-## 设计参考
-
-README 的信息架构和生态术语参考了以下成熟项目：
-
-- [obra/superpowers](https://github.com/obra/superpowers)：Agent-first 入门和分平台安装说明；
-- [anthropics/skills](https://github.com/anthropics/skills) 与 [agentskills/agentskills](https://github.com/agentskills/agentskills)：skill 结构和渐进式披露术语；
-- [vercel-labs/skills](https://github.com/vercel-labs/skills) 与 [numman-ali/openskills](https://github.com/numman-ali/openskills)：CLI 导航、来源/目标区分和符号链接安装；
-- [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills)：明确说明第三方 skill 的安全风险。
-
-`manage-my-skills` 是独立项目，不包含这些项目的代码。
+运行时不依赖第三方 Python 包。
 
 ## 贡献
 
-欢迎提交 issue 和范围明确的 pull request。修改安全行为前请阅读 [AGENTS.md](../AGENTS.md)。所有改动必须保留默认预览、私库验证、暂存路径白名单和 restore 不覆盖原则。
+欢迎提交 issue 和范围明确的 pull request。开发说明见 [AGENTS.md](../AGENTS.md)。
 
 ## 许可证
 

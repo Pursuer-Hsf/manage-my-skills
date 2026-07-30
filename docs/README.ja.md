@@ -158,71 +158,38 @@ my-skills/
 
 ここにはリポジトリ識別子、ローカルパス、schema バージョン、タイムスタンプだけを保存し、認証情報は保存しません。
 
-非公開 skills をこの公開リポジトリに置き、`.gitignore` で隠してはいけません。無視されたファイルはマシン間で同期されず、`git clean -xfd` などで削除される可能性があります。
-
 ## セキュリティモデル
 
-- すべての変更を事前にプレビューし、ユーザーの明示的な承認を得ます。
-- setup、import、sync、restore の前に GitHub がリポジトリを Private と報告する必要があります。
-- 認証は `gh` または OS の認証情報ストアが管理します。
-- import は認証情報らしい内容と、skill 外へ出る symlink を拒否します。
-- sync が stage するのは `library.json` と `skills/` だけで、`git add -A` は使いません。
-- pull とマネージャー更新は fast-forward-only です。
-- restore はリンク作成前に全ターゲットを検査します。
-- 既存ターゲット、分岐した履歴、競合、force push、自動 merge が必要な場合は停止します。
+- 変更は事前にプレビューし、明示的な承認を得ます。
+- skills リポジトリが Private であることを検証します。
+- 認証情報は GitHub または OS の認証情報ストアに保存します。
+- 機密情報らしい内容、危険なリンク、競合、既存ターゲットがある場合は停止します。
+- 上書き、force push、自動 merge は行いません。
 - サードパーティ、マーケットプレイス、プラグイン、組み込み skills は、既定ではコピーせず参照元だけを記録します。
 
-パターン検出だけで安全性を証明することはできません。アップロード前に内部ホスト、個人識別情報、独自手順、ライセンス、機密情報を確認してください。詳細は [SECURITY.md](../SECURITY.md) を参照してください。
+自動検査だけで安全性を証明することはできません。詳細は [SECURITY.md](../SECURITY.md) を参照してください。
 
 ## 互換性とスコープ
 
-`manage-my-skills` は公開 [`SKILL.md` 形式](https://agentskills.io/) を使用し、自動検出・インストールは Codex を第一対象とします。他の Agent でも、次の条件を満たせば `skills/manage-my-skills/SKILL.md` を読み、同梱マネージャーを操作できます。
-
-- ファイルシステムへのアクセス
-- Python 3.9 以降
-- Git
-- 非公開リポジトリ検証用 GitHub CLI
-- ネットワークと GitHub 権限
-
-自動呼び出し、skill 検索パス、hooks、symlink 対応は Agent ごとに異なります。すべてのプラットフォームで同一の自動動作を保証するものではありません。
+`manage-my-skills` は公開 [`SKILL.md` 形式](https://agentskills.io/) を使用し、Codex を優先してサポートします。ファイルシステムへアクセスできる他の Agent でも、Python 3.9+、Git、GitHub アクセスがあれば使用できます。検出パスや自動動作は Agent ごとに異なる場合があります。
 
 ## トラブルシューティング
 
-Agent に次のように依頼します。
-
-> `manage-my-skills` を診断してください。認証、ローカル状態、リポジトリの Private 設定、リンク、同期状態を確認し、変更前に原因と修復案を報告してください。
-
-- GitHub 認証: Agent にブラウザまたはデバイスフローを開始させ、表示されたときに承認します。
-- `library`: checkout が存在し、`.git/` と `skills/` を含むことを確認します。
-- restore ターゲットが既存: 手動で確認してください。マネージャーは置き換えません。
-- Git 履歴が分岐: バックアップ後、マネージャー外で手動解決します。
-- skill が見えない: symlink を確認し、Agent プロセスを再起動または再読み込みします。
+```text
+manage-my-skills を診断し、変更前に原因と修復案を報告してください。
+```
 
 ## 開発
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile skills/manage-my-skills/scripts/manage_my_skills.py
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/manage-my-skills
 ```
 
-実行時の Python パッケージ依存はありません。外部 skill バリデーターには開発時に `PyYAML` が必要な場合があります。
-
-## 設計上の参考
-
-README の構成とエコシステム用語は、次の成熟したプロジェクトを参考にしています。
-
-- [obra/superpowers](https://github.com/obra/superpowers): Agent ファーストの導入とプラットフォーム別インストール
-- [anthropics/skills](https://github.com/anthropics/skills)、[agentskills/agentskills](https://github.com/agentskills/agentskills): skill 構造と progressive disclosure
-- [vercel-labs/skills](https://github.com/vercel-labs/skills)、[numman-ali/openskills](https://github.com/numman-ali/openskills): CLI ナビゲーション、source/target の区別、symlink インストール
-- [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills): サードパーティ skill の明確なセキュリティ注意
-
-`manage-my-skills` は独立したプロジェクトであり、これらのプロジェクトのコードを含みません。
+実行時にサードパーティ製 Python パッケージは必要ありません。
 
 ## コントリビューション
 
-Issue と範囲を絞った pull request を歓迎します。安全動作を変更する前に [AGENTS.md](../AGENTS.md) を読んでください。変更は、プレビュー優先、Private 検証、stage パスの allowlist、上書きしない restore を維持する必要があります。
+Issue と範囲を絞った pull request を歓迎します。開発ガイドは [AGENTS.md](../AGENTS.md) を参照してください。
 
 ## ライセンス
 

@@ -158,73 +158,38 @@ Local connection state defaults to:
 
 It contains repository identity, local paths, schema version, and timestamps only. It must not contain credentials.
 
-Do not keep private skills inside this public repository and hide them with `.gitignore`. Ignored files do not synchronize across machines and may be removed by commands such as `git clean -xfd`.
-
 ## Safety Model
 
-- Every mutation is previewed and requires explicit user approval.
-- GitHub must report the skill repository as Private before setup, import, sync, or restore.
-- Authentication belongs to `gh` or the operating system credential store.
-- Imports reject secret-like content and symlinks that escape the skill directory.
-- Sync stages only `library.json` and `skills/`; it never runs `git add -A`.
-- Pulls and manager updates use fast-forward-only behavior.
-- Restore preflights every target before creating any link.
-- Existing targets, divergent history, conflicts, force pushes, and automatic merges stop the workflow.
+- Changes are previewed and require explicit approval.
+- The skills repository must be verified as Private.
+- Credentials stay in GitHub or the operating system credential store.
+- Sensitive-looking content, unsafe links, conflicts, and existing targets stop the workflow.
+- The manager never overwrites, force-pushes, or automatically merges.
 - Third-party, marketplace, plugin, and bundled skills are references by default, not private copies.
 
-Pattern matching cannot prove that content is safe. Review internal hosts, personal identifiers, proprietary procedures, licenses, and confidential data before upload. See [SECURITY.md](SECURITY.md) for the full policy.
+Automated checks reduce risk but cannot prove content is safe. See [SECURITY.md](SECURITY.md).
 
 ## Compatibility and Scope
 
-`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first for automatic discovery and installation. Other Agents can use it by reading `skills/manage-my-skills/SKILL.md` and operating the bundled manager when they provide:
-
-- filesystem access;
-- Python 3.9 or newer;
-- Git;
-- GitHub CLI for verified private-repository operations;
-- network and GitHub permissions.
-
-Automatic invocation, skill search paths, hooks, and symlink support differ by agent. The project does not claim identical automatic behavior on every platform.
+`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first. Other filesystem-capable Agents can use the bundled skill with Python 3.9+, Git, and GitHub access. Discovery paths and automatic behavior may differ by Agent.
 
 ## Troubleshooting
 
-Ask the Agent:
-
-> Diagnose my `manage-my-skills` installation. Check authentication, local state, repository privacy, links, and synchronization status. Report the cause and proposed repair before changing anything.
-
-Common actions:
-
-- GitHub authentication: let the Agent start the browser or device flow, then approve it when prompted.
-- `library`: verify the configured checkout still exists and contains `.git/` and `skills/`.
-- Existing restore target: inspect it manually; the manager will not replace it.
-- Diverged Git history: resolve it outside the manager after making a backup.
-- Skill not visible: verify the symlink and restart or reload the Agent process.
+```text
+Diagnose manage-my-skills. Report the cause and proposed repair before changing anything.
+```
 
 ## Development
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile skills/manage-my-skills/scripts/manage_my_skills.py
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/manage-my-skills
 ```
 
-The runtime has no Python package dependencies. Development validation may require `PyYAML` for the external skill validator.
-
-## Design References
-
-The README structure and ecosystem terminology were informed by established projects including:
-
-- [obra/superpowers](https://github.com/obra/superpowers) for Agent-first onboarding and platform-specific installation clarity;
-- [anthropics/skills](https://github.com/anthropics/skills) and [agentskills/agentskills](https://github.com/agentskills/agentskills) for skill structure and progressive-disclosure terminology;
-- [vercel-labs/skills](https://github.com/vercel-labs/skills) and [numman-ali/openskills](https://github.com/numman-ali/openskills) for CLI navigation, source/target distinctions, and symlink-based installation;
-- [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) for explicit third-party skill security warnings.
-
-`manage-my-skills` is independent and does not include code from those projects.
+The runtime has no third-party Python package dependencies.
 
 ## Contributing
 
-Issues and focused pull requests are welcome. Read [AGENTS.md](AGENTS.md) before changing safety behavior. Changes must preserve preview-by-default semantics, private-repository verification, staged-path allowlisting, and no-overwrite restore behavior.
+Issues and focused pull requests are welcome. See [AGENTS.md](AGENTS.md).
 
 ## License
 
