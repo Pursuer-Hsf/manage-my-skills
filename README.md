@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/manage-my-skills-logo.png" alt="manage-my-skills logo" width="120">
+
 # manage-my-skills
 
 **Stop losing personal skills between machines. Let your Agent manage the library.**

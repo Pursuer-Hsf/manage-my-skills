@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="../assets/manage-my-skills-logo.png" alt="manage-my-skills logo" width="120">
+
 # manage-my-skills
 
 **个人 skills 越积越多、机器越用越乱？交给 Agent 自动归档、私密沉淀、多服务器同步。**

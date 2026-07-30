@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="../assets/manage-my-skills-logo.png" alt="manage-my-skills logo" width="120">
+
 # manage-my-skills
 
 **増え続ける個人 skills を Agent に任せて整理、蓄積、複数サーバーで同期。**

@@ -11,6 +11,7 @@ DOCUMENTS = [
 ]
 MANAGER_SKILL = ROOT / "skills" / "manage-my-skills" / "SKILL.md"
 MANAGER_AGENT_CONFIG = ROOT / "skills" / "manage-my-skills" / "agents" / "openai.yaml"
+LOGO = ROOT / "assets" / "manage-my-skills-logo.png"
 HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
         "## How to Use",
@@ -60,6 +61,13 @@ class DocumentationTests(unittest.TestCase):
             self.assertIn("English", text)
             self.assertIn("简体中文", text)
             self.assertIn("日本語", text)
+
+    def test_logo_asset_is_used_in_all_readmes(self):
+        self.assertTrue(LOGO.is_file())
+        self.assertTrue(LOGO.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
+        for document in DOCUMENTS:
+            text = document.read_text(encoding="utf-8")
+            self.assertIn("manage-my-skills-logo.png", text)
 
     def test_all_languages_include_how_to_use_examples(self):
         for document, markers in HOW_TO_USE_MARKERS.items():
