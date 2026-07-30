@@ -109,12 +109,16 @@ Check and maintain my personal skills library.
 Report problems first, then back up and synchronize only after I approve.
 ```
 
-### Save this workflow as a skill
+### Agent suggests a new skill
+
+After a reusable task, the Agent offers:
 
 ```text
-Turn the reusable parts of this task into a personal skill.
-Show me the sanitized content first, then add it to my private library and synchronize it.
+Agent: This workflow looks reusable. Save it as a personal skill?
+You: Yes. Show me a sanitized preview first.
 ```
+
+The Agent creates, adds, and synchronizes it only after your approval.
 
 ### Synchronize servers
 

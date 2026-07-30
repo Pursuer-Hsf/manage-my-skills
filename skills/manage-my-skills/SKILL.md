@@ -1,6 +1,6 @@
 ---
 name: manage-my-skills
-description: Safely discover, classify, back up, synchronize, and restore user-owned agent skills with a separate private GitHub repository. Use when a user asks an Agent to organize local skills, set up private skill backup, import or sync personal skills, restore them on a new machine, diagnose GitHub access, or update this public manager without changing the managed skills.
+description: Safely discover, classify, back up, synchronize, restore, and preserve user-owned agent skills in a separate private GitHub repository. Use when a user asks to organize local skills; create, connect, or diagnose a private skill library; import, synchronize, or restore personal skills; update this manager; or preserve a reusable user-owned workflow from the current task.
 ---
 
 # Manage My Skills
@@ -25,6 +25,18 @@ Manage the public manager and the user's private skill library as two independen
 - Restore a machine: run `restore` without `--apply`, verify every target, then apply.
 - Diagnose failure: run `doctor`; ask the user only for browser login, MFA, or permission approval that the Agent cannot complete.
 - Update this manager: run `update-manager`; do not invoke private-library synchronization as part of the update.
+
+## Suggest Reusable Skill Capture
+
+When the current task produces a clearly reusable, user-owned workflow that is not already a skill:
+
+1. Offer once to turn it into a personal skill.
+2. Keep the prompt short: name the reusable value and ask whether to prepare a sanitized preview.
+3. Do not create, import, or synchronize anything until the user agrees.
+4. After agreement, use an appropriate skill-authoring workflow, remove machine-specific or sensitive details, and show the proposed content.
+5. Import and synchronize only after separate approval.
+
+Do not suggest capture for trivial one-off work, third-party instructions, or content whose main value depends on credentials, private identifiers, or confidential data.
 
 ## Non-Negotiable Safety Rules
 

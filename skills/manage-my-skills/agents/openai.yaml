@@ -1,6 +1,6 @@
 interface:
   display_name: "Manage My Skills"
-  short_description: "Safely manage and back up personal agent skills"
+  short_description: "Manage, sync, and preserve personal agent skills"
   default_prompt: "Use $manage-my-skills to inspect and safely manage my local skills."
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

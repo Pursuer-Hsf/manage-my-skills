@@ -9,11 +9,14 @@ DOCUMENTS = [
     ROOT / "docs" / "README.zh-CN.md",
     ROOT / "docs" / "README.ja.md",
 ]
+MANAGER_SKILL = ROOT / "skills" / "manage-my-skills" / "SKILL.md"
+MANAGER_AGENT_CONFIG = ROOT / "skills" / "manage-my-skills" / "agents" / "openai.yaml"
 HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
         "## How to Use",
         "### First-time setup",
         "### Routine maintenance",
+        "### Agent suggests a new skill",
         "### Synchronize servers",
         "### Restore on a new machine",
     ],
@@ -21,6 +24,7 @@ HOW_TO_USE_MARKERS = {
         "## 如何使用",
         "### 第一次配置",
         "### 日常维护",
+        "### Agent 主动提醒沉淀",
         "### 同步多台服务器",
         "### 在新机器恢复",
     ],
@@ -28,6 +32,7 @@ HOW_TO_USE_MARKERS = {
         "## 使い方",
         "### 初回設定",
         "### 日常メンテナンス",
+        "### Agent から skill 化を提案",
         "### 複数サーバーを同期",
         "### 新しいマシンで復元",
     ],
@@ -67,6 +72,19 @@ class DocumentationTests(unittest.TestCase):
             text = document.read_text(encoding="utf-8")
             found = [marker for marker in INTERNAL_CLI_MARKERS if marker in text]
             self.assertEqual(found, [], f"{document}: exposes internal CLI {found}")
+
+    def test_manager_skill_defines_proactive_capture_safely(self):
+        text = MANAGER_SKILL.read_text(encoding="utf-8")
+        for marker in [
+            "## Suggest Reusable Skill Capture",
+            "Offer once",
+            "Do not create, import, or synchronize anything until the user agrees.",
+            "Import and synchronize only after separate approval.",
+        ]:
+            self.assertIn(marker, text)
+
+        agent_config = MANAGER_AGENT_CONFIG.read_text(encoding="utf-8")
+        self.assertIn("allow_implicit_invocation: true", agent_config)
 
     def test_local_markdown_links_resolve(self):
         for document in DOCUMENTS:
