@@ -1,6 +1,6 @@
 ---
 name: manage-my-skills
-description: Automatically detect when reusable workflows should become new or updated personal skills, and safely manage personal and source-installed open-source agent skills across multiple machines. Use when organizing, installing, updating, backing up, synchronizing, restoring, or diagnosing skills; managing a private skill library; or preserving a reusable workflow from the current task.
+description: Automatically detect when reusable workflows should become new or updated personal skills, safely manage personal and source-installed open-source agent skills across multiple machines, and keep this manager current. Use when organizing, installing, updating, backing up, synchronizing, restoring, or diagnosing skills; managing a private skill library; or preserving a reusable workflow from the current task.
 ---
 
 # Manage My Skills
@@ -10,9 +10,13 @@ Manage the public manager and the user's private skill library as two independen
 ## Start Every Workflow
 
 1. Locate this skill's `scripts/manage_my_skills.py`.
-2. Run `python3 <script> doctor` and `python3 <script> scan` before proposing changes.
-3. Explain the result in plain language. Do not assume the user knows Git or GitHub.
-4. Preview mutating commands first. Use `--apply` only after the user approves the stated files, repository, and effects.
+2. Run `manager-status` once. If a fast-forward update is available, report it and offer to update the public manager before changing managed skills. After an update, re-read this `SKILL.md` before continuing.
+3. Run `doctor` and `scan` before proposing managed-skill changes.
+4. Explain the result in plain language. Do not assume the user knows Git or GitHub.
+5. Preview mutating commands first. Use `--apply` only after the user approves the stated files, repository, and effects.
+
+For a capture-only suggestion, do not interrupt the current task with a network check. Run the manager check after the user accepts the suggestion and before changing skill files.
+If the update check cannot reach the remote, report that the version is unverified and continue only with work that does not depend on a manager update. Never describe a failed check as current.
 
 ## Choose The Workflow
 
@@ -26,7 +30,8 @@ Manage the public manager and the user's private skill library as two independen
 - Publish private changes: run `sync` without `--apply`, review the file list, then apply.
 - Restore a machine: run `restore` without `--apply`, verify every target, then apply. Reconcile every source-managed skill separately through its official source.
 - Diagnose failure: run `doctor`; ask the user only for browser login, MFA, or permission approval that the Agent cannot complete.
-- Update this manager: run `update-manager`; do not invoke private-library synchronization as part of the update.
+- Update this manager: run `manager-status`, then preview and run `update-manager` only when the state is `update-available`. Do not invoke private-library synchronization as part of the update.
+- Manage several machines: check and update the public manager independently on each machine before reconciling personal and source-managed skills.
 
 ## Suggest Reusable Skill Capture Or Update
 
@@ -52,8 +57,9 @@ Read [safety.md](references/safety.md) before any setup, import, sync, or restor
 - Never store executable installation commands, credentials, or machine-local paths in the portable source inventory.
 - Stop on secret-scan findings, existing restore targets, non-fast-forward history, conflicts, or staged paths outside `library.json` and `skills/`.
 - Never run `git add -A`, force-push, rewrite history, silently resolve conflicts, or delete/overwrite a skill.
+- Update this public manager only by fast-forward. Stop on a dirty worktree, local-ahead history, divergence, or detached HEAD.
 - Do not use ignored directories as private storage. Ignored files do not synchronize and can be removed by cleanup commands such as `git clean -xfd`.
 
 ## Support Boundary
 
-Automatic discovery is Codex-first and also checks common shared skill locations. Personal skills synchronize as private content; open-source skills synchronize as a portable desired-source inventory and are reconciled on each machine through their official installer. Other Agents can use this repository with filesystem, Git, GitHub, and network access, but automatic invocation differs by platform.
+Automatic discovery is Codex-first and also checks common shared skill locations. Manager update checks run when this management workflow is invoked, not as a background daemon. Personal skills synchronize as private content; open-source skills synchronize as a portable desired-source inventory and are reconciled on each machine through their official installer. Other Agents can use this repository with filesystem, Git, GitHub, and network access, but automatic invocation differs by platform.

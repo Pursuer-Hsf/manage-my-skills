@@ -6,7 +6,7 @@
 
 **Automatically capture better workflows and keep every skill consistent across machines.**
 
-Personal skills sync privately. Open-source skills stay installed and updated from their original sources.
+Personal skills sync privately. Open-source skills stay current from their original sources. The manager checks its own updates when used.
 
 [English](README.md) | [简体中文](docs/README.zh-CN.md) | [日本語](docs/README.ja.md)
 
@@ -19,7 +19,7 @@ Personal skills sync privately. Open-source skills stay installed and updated fr
 
 Your best workflows should not disappear into old chats, and your installed skills should not drift between machines.
 
-`manage-my-skills` lets an Agent detect reusable work, suggest creating or updating a personal skill, and keep both personal and source-installed open-source skills consistent across workstations and servers.
+`manage-my-skills` lets an Agent detect reusable work, suggest creating or updating a personal skill, keep personal and source-installed open-source skills consistent across machines, and keep the manager itself current.
 
 ## The Personal Skills Problem
 
@@ -35,7 +35,7 @@ Creating a skill is easy. Keeping a growing personal skills library healthy is n
 
 `manage-my-skills` gives the Agent one desired skill inventory. Personal skills synchronize as private content; open-source skills synchronize as source records and are installed or updated through their official sources.
 
-> **Agent-managed, human-approved.** The Agent works when asked, previews mutations, and stops for authentication, conflicts, destructive decisions, or sensitive content. It never runs a silent background push.
+> **Agent-managed, human-approved.** When invoked, the Agent checks the manager repository for updates and previews every mutation. It never runs a silent background update or push.
 
 ## Give This Repository to Your Agent
 
@@ -87,7 +87,7 @@ The public repository contains the manager. The private repository contains pers
 - Synchronize only allowlisted paths with fast-forward-only Git behavior.
 - Restore skills with a complete no-overwrite preflight and canonical symlinks.
 - Diagnose Git, GitHub authentication, local state, and repository health.
-- Update the public manager without touching the private skill library.
+- Check the public manager for updates when invoked and fast-forward it without touching managed skills.
 - Keep one private source of truth synchronized across workstations and multiple servers while each machine retains local state and authentication.
 
 ## How to Use
@@ -114,6 +114,7 @@ Check for conflicts first and do not overwrite existing skills.
 ```text
 Check and maintain all my skills.
 Suggest personal skills to create or update, and report open-source installation or version drift.
+Also check whether manage-my-skills itself needs an update.
 Make changes only after I approve.
 ```
 
@@ -132,6 +133,7 @@ If no related skill exists, the Agent suggests creating one instead. Nothing cha
 
 ```text
 Keep skills consistent across server-a, server-b, and server-c.
+Check manage-my-skills for updates on each machine first.
 Sync personal skills privately; install or update open-source skills from their official sources.
 Check one machine at a time, do not overwrite anything, and summarize the results.
 ```
@@ -147,7 +149,8 @@ Check for conflicts first and do not overwrite anything.
 ### Update only the manager
 
 ```text
-Update manage-my-skills only.
+Check manage-my-skills for updates and show me the plan.
+Update it only after I approve.
 Do not change or synchronize my private skills library.
 ```
 
@@ -181,6 +184,7 @@ It contains repository identity, local paths, schema version, and timestamps onl
 - Credentials stay in GitHub or the operating system credential store.
 - Sensitive-looking content, unsafe links, conflicts, and existing targets stop the workflow.
 - The manager never overwrites, force-pushes, or automatically merges.
+- The public manager updates only by fast-forward and stops on local changes or divergent history.
 - Open-source, marketplace, plugin, and bundled skills keep their original update authority; only portable source metadata is synchronized.
 
 Automated checks reduce risk but cannot prove content is safe. See [SECURITY.md](SECURITY.md).

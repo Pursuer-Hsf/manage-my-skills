@@ -1,6 +1,6 @@
 interface:
   display_name: "Manage My Skills"
-  short_description: "Keep personal and open-source skills in sync"
+  short_description: "Keep manager, personal, and open-source skills current"
   default_prompt: "Use $manage-my-skills to inspect and safely manage my local skills."
 policy:
   allow_implicit_invocation: true

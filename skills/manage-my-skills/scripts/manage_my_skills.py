@@ -20,6 +20,7 @@ from typing import Iterable, Sequence
 SCHEMA_VERSION = 1
 STATE_HOME = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 STATE_PATH = STATE_HOME / "manage-my-skills" / "state.json"
+DEFAULT_MANAGER_DIR = Path(__file__).resolve().parents[3]
 MANIFEST_NAME = "library.json"
 ALLOWED_TOP_LEVEL = {MANIFEST_NAME, "skills"}
 SOURCE_KINDS = {"github", "marketplace", "plugin", "other"}
@@ -482,6 +483,37 @@ def worktree_dirty(library_dir: Path) -> bool:
     return bool(git(library_dir, "status", "--porcelain").stdout.strip())
 
 
+def manager_update_status(repo_dir: Path) -> dict:
+    repo_dir = repo_dir.expanduser().resolve()
+    if not (repo_dir / ".git").exists():
+        fail(f"Manager directory is not a Git repository: {repo_dir}")
+    branch_result = git(repo_dir, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
+    if branch_result.returncode:
+        fail("Manager update check requires a branch checkout, not detached HEAD")
+    branch = branch_result.stdout.strip()
+    fetch = git(repo_dir, "fetch", "--quiet", "origin", branch, check=False)
+    if fetch.returncode:
+        detail = (fetch.stderr or fetch.stdout or "fetch failed").strip()
+        fail(f"Cannot check manager updates from origin/{branch}: {detail}")
+    local = git(repo_dir, "rev-parse", "HEAD").stdout.strip()
+    remote = git(repo_dir, "rev-parse", "FETCH_HEAD").stdout.strip()
+    if local == remote:
+        state = "current"
+    elif git(repo_dir, "merge-base", "--is-ancestor", local, remote, check=False).returncode == 0:
+        state = "update-available"
+    elif git(repo_dir, "merge-base", "--is-ancestor", remote, local, check=False).returncode == 0:
+        state = "local-ahead"
+    else:
+        state = "diverged"
+    return {
+        "manager_dir": str(repo_dir),
+        "branch": branch,
+        "state": state,
+        "local_commit": local,
+        "remote_commit": remote,
+    }
+
+
 def ahead_behind(library_dir: Path) -> tuple[int, int]:
     upstream = git(library_dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}", check=False)
     if upstream.returncode:
@@ -624,18 +656,35 @@ def command_doctor(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def command_manager_status(args: argparse.Namespace) -> None:
+    repo_dir = Path(args.manager_dir).expanduser()
+    status = manager_update_status(repo_dir)
+    if args.json:
+        print(json.dumps(status, indent=2))
+        return
+    say(f"Manager status: {status['state']} ({status['branch']})")
+    if status["state"] == "update-available":
+        say("A fast-forward manager update is available.")
+    elif status["state"] in {"local-ahead", "diverged"}:
+        say("Automatic manager update is blocked until the Git history is reviewed.")
+
+
 def command_update_manager(args: argparse.Namespace) -> None:
     repo_dir = Path(args.manager_dir).expanduser()
-    if not (repo_dir / ".git").exists():
-        fail(f"Manager directory is not a Git repository: {repo_dir}")
-    say(f"Plan: update manager at {repo_dir} using git pull --ff-only")
+    status = manager_update_status(repo_dir)
+    if status["state"] == "current":
+        say("Manager is already current. Private skills were not modified.")
+        return
+    if status["state"] != "update-available":
+        fail(f"Manager update stopped because repository state is {status['state']}")
+    say(f"Plan: fast-forward manager at {repo_dir} to origin/{status['branch']}")
     say("Private skill library will not be touched.")
     if not args.apply:
         say("Preview only. Re-run with --apply to update.")
         return
     if worktree_dirty(repo_dir):
         fail("Manager has local changes. Commit or review them before updating.")
-    git(repo_dir, "pull", "--ff-only")
+    git(repo_dir, "merge", "--ff-only", "FETCH_HEAD")
     say("Manager updated. Private skills were not modified.")
 
 
@@ -711,8 +760,13 @@ def parser() -> argparse.ArgumentParser:
     doctor.add_argument("--json", action="store_true")
     doctor.set_defaults(func=command_doctor)
 
-    update = sub.add_parser("update-manager", help="Update only this public manager checkout")
-    update.add_argument("--manager-dir", required=True)
+    manager_status = sub.add_parser("manager-status", help="Check this public manager for updates")
+    manager_status.add_argument("--manager-dir", default=str(DEFAULT_MANAGER_DIR))
+    manager_status.add_argument("--json", action="store_true")
+    manager_status.set_defaults(func=command_manager_status)
+
+    update = sub.add_parser("update-manager", help="Safely fast-forward this public manager checkout")
+    update.add_argument("--manager-dir", default=str(DEFAULT_MANAGER_DIR))
     update.add_argument("--apply", action="store_true")
     update.set_defaults(func=command_update_manager)
     return root

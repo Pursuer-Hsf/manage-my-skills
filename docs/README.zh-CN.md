@@ -6,7 +6,7 @@
 
 **Agent 自动提醒沉淀或更新 skill，并让个人与开源 skills 在多台机器保持一致。**
 
-个人 skills 私密同步，开源 skills 始终从官方来源安装和更新。
+个人 skills 私密同步，开源 skills 始终从官方来源更新，管理器也会检查自身更新。
 
 [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
@@ -19,7 +19,7 @@
 
 真正的难点不是写一个 skill，而是持续发现值得沉淀或更新的经验，并让所有机器上的 skills 保持一致。
 
-`manage-my-skills` 让 Agent 自动识别可复用流程，主动建议新建或更新个人 skill，同时统一管理本机和多台服务器上的个人 skills 与开源 skills。
+`manage-my-skills` 让 Agent 自动识别可复用流程，主动建议新建或更新个人 skill，统一管理多台机器上的个人 skills 与开源 skills，并及时检查管理器自身更新。
 
 ## 它解决的就是这些麻烦
 
@@ -35,7 +35,7 @@
 
 `manage-my-skills` 为 Agent 提供一份统一的 skills 清单：个人 skills 以私密内容同步；开源 skills 同步来源信息，并在每台机器按官方来源安装或更新。
 
-> **Agent 管理，用户确认。** Agent 在收到请求时工作，所有修改先预览；遇到登录、冲突、破坏性决策或敏感内容时必须停下来确认。它不会在后台静默推送。
+> **Agent 管理，用户确认。** 每次调用时，Agent 会检查管理器仓库更新，并预览所有修改。它不会在后台静默更新或推送。
 
 ## 把仓库交给 Agent 即可开始
 
@@ -87,7 +87,7 @@ flowchart LR
 - 只同步白名单路径，并使用 fast-forward-only Git 行为。
 - 先完整检查所有目标，再用规范符号链接恢复 skills，绝不覆盖。
 - 诊断 Git、GitHub 登录、本机状态和仓库健康状况。
-- 只更新公共管理器，不触碰私有 skills。
+- 调用时检查公共管理器更新，只做安全快进，不触碰受管理 skills。
 - 以一个私库作为唯一事实来源，同步本机和多台服务器；每台机器仍独立保存状态和 GitHub 身份验证。
 
 ## 如何使用
@@ -114,6 +114,7 @@ flowchart LR
 ```text
 检查并维护我的全部 skills。
 提醒应该新建或更新的个人 skill，并报告开源 skills 的安装或版本差异。
+同时检查 manage-my-skills 自身是否需要更新。
 我确认后再修改。
 ```
 
@@ -132,6 +133,7 @@ Agent：这个流程可以补充现有的 xxx skill，是否更新？
 
 ```text
 让 server-a、server-b、server-c 的 skills 保持一致。
+先逐台检查并更新 manage-my-skills。
 个人 skills 走私库同步；开源 skills 按官方来源安装或更新。
 逐台检查，不要覆盖，完成后汇总结果。
 ```
@@ -147,7 +149,8 @@ Agent：这个流程可以补充现有的 xxx skill，是否更新？
 ### 只更新管理器
 
 ```text
-只更新 manage-my-skills。
+检查 manage-my-skills 是否有更新，先展示计划。
+我确认后只更新管理器。
 不要修改或同步我的私有 skills 库。
 ```
 
@@ -181,6 +184,7 @@ my-skills/
 - 凭据由 GitHub 或操作系统凭据管理器保存。
 - 疑似敏感内容、危险链接、冲突和已有目标都会让流程停止。
 - 管理器不会覆盖、强制推送或自动合并。
+- 公共管理器只允许快进更新；存在本地修改或历史分叉时停止。
 - 开源、市场、插件和系统内置 skills 保留原更新来源，只同步可移植的来源信息。
 
 自动检查只能降低风险，不能证明内容绝对安全。完整策略见 [SECURITY.md](../SECURITY.md)。

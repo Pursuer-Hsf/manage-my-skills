@@ -28,6 +28,28 @@ def write_skill(path: Path, body: str = "# Example\n") -> None:
     )
 
 
+def manager_repo_pair(base: Path) -> tuple[Path, Path]:
+    source = base / "manager-source"
+    checkout = base / "manager-checkout"
+    subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(source), "branch", "-M", "main"], check=True)
+    (source / "version.txt").write_text("v1\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(source), "add", "version.txt"], check=True)
+    subprocess.run(["git", "-C", str(source), "commit", "-m", "Initial"], check=True, capture_output=True)
+    subprocess.run(["git", "clone", str(source), str(checkout)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(checkout), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(checkout), "config", "user.email", "test@example.invalid"], check=True)
+    return source, checkout
+
+
+def commit_version(repo: Path, version: str) -> None:
+    (repo / "version.txt").write_text(f"{version}\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "version.txt"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", version], check=True, capture_output=True)
+
+
 class ManagerTests(unittest.TestCase):
     def test_add_user_local_bin_to_path(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -91,6 +113,40 @@ class ManagerTests(unittest.TestCase):
         self.assertTrue(info["isPrivate"])
         command = execute.call_args.args[0]
         self.assertEqual(command[-1], "nameWithOwner,isPrivate")
+
+    def test_manager_status_detects_and_applies_fast_forward_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, checkout = manager_repo_pair(Path(tmp))
+            self.assertEqual(manager.manager_update_status(checkout)["state"], "current")
+            commit_version(source, "v2")
+            self.assertEqual(manager.manager_update_status(checkout)["state"], "update-available")
+            code = manager.main(["update-manager", "--manager-dir", str(checkout)])
+            self.assertEqual(code, 0)
+            self.assertEqual((checkout / "version.txt").read_text(), "v1\n")
+            code = manager.main(["update-manager", "--manager-dir", str(checkout), "--apply"])
+            self.assertEqual(code, 0)
+            self.assertEqual((checkout / "version.txt").read_text(), "v2\n")
+            self.assertEqual(manager.manager_update_status(checkout)["state"], "current")
+
+    def test_manager_update_stops_when_local_history_is_ahead(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, checkout = manager_repo_pair(Path(tmp))
+            commit_version(checkout, "local")
+            self.assertEqual(manager.manager_update_status(checkout)["state"], "local-ahead")
+            code = manager.main(["update-manager", "--manager-dir", str(checkout), "--apply"])
+            self.assertEqual(code, 2)
+            self.assertEqual((checkout / "version.txt").read_text(), "local\n")
+
+    def test_manager_update_stops_on_dirty_worktree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, checkout = manager_repo_pair(Path(tmp))
+            commit_version(source, "v2")
+            (checkout / "local.txt").write_text("keep\n", encoding="utf-8")
+            self.assertEqual(manager.manager_update_status(checkout)["state"], "update-available")
+            code = manager.main(["update-manager", "--manager-dir", str(checkout), "--apply"])
+            self.assertEqual(code, 2)
+            self.assertEqual((checkout / "version.txt").read_text(), "v1\n")
+            self.assertTrue((checkout / "local.txt").is_file())
 
     def test_import_preview_does_not_copy(self):
         with tempfile.TemporaryDirectory() as tmp:

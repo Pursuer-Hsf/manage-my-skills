@@ -43,16 +43,19 @@ POSITIONING_MARKERS = {
         "suggest creating or updating a personal skill",
         "source-installed open-source skills",
         "install or update open-source skills from their official sources",
+        "The manager checks its own updates when used.",
     ],
     ROOT / "docs" / "README.zh-CN.md": [
         "主动建议新建或更新个人 skill",
         "个人 skills 与开源 skills",
         "开源 skills 按官方来源安装或更新",
+        "管理器也会检查自身更新",
     ],
     ROOT / "docs" / "README.ja.md": [
         "新しい個人 skill の作成や既存 skill の更新",
         "個人 skills とソース管理された公開 skills",
         "公開 skills は公式ソースから導入・更新",
+        "マネージャー自身の更新も確認",
     ],
 }
 INTERNAL_CLI_MARKERS = [
@@ -113,6 +116,10 @@ class DocumentationTests(unittest.TestCase):
             "Import and synchronize only after separate approval.",
             "track-source",
             "sources",
+            "manager-status",
+            "re-read this `SKILL.md`",
+            "Update this public manager only by fast-forward.",
+            "not as a background daemon",
         ]:
             self.assertIn(marker, text)
 
