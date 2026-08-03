@@ -1,6 +1,7 @@
 ---
 name: manage-my-skills
 description: Automatically detect when reusable workflows should become new or updated personal skills, safely manage personal and source-installed open-source agent skills across multiple machines, and keep this manager current. Use when organizing, installing, updating, backing up, synchronizing, restoring, or diagnosing skills; managing a private skill library; or preserving a reusable workflow from the current task.
+license: MIT
 ---
 
 # Manage My Skills
