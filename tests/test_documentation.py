@@ -13,6 +13,8 @@ MANAGER_SKILL = ROOT / "skills" / "manage-my-skills" / "SKILL.md"
 MANAGER_AGENT_CONFIG = ROOT / "skills" / "manage-my-skills" / "agents" / "openai.yaml"
 LOGO = ROOT / "assets" / "manage-my-skills-logo.png"
 SOCIAL_PREVIEW = ROOT / "assets" / "social-preview.png"
+LIFECYCLE_DIAGRAM = ROOT / "assets" / "skill-lifecycle.png"
+LIFECYCLE_SOURCE = ROOT / "assets" / "skill-lifecycle.svg"
 HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
         "## How to Use",
@@ -41,22 +43,34 @@ HOW_TO_USE_MARKERS = {
 }
 POSITIONING_MARKERS = {
     ROOT / "README.md": [
-        "suggest creating or updating a personal skill",
-        "source-installed open-source skills",
-        "install or update open-source skills from their official sources",
-        "The manager checks its own updates when used.",
+        "The lifecycle manager for personal Agent skills.",
+        "Turn reusable work into private skills.",
+        "Keep public skills tied to their sources.",
+        "## Three Paths, One Inventory",
+        "The Agent proposes a sanitized preview",
+        "records the canonical source, path, and optional ref",
+        "same desired skills state",
+        "checks the manager repository for updates",
     ],
     ROOT / "docs" / "README.zh-CN.md": [
-        "主动建议新建或更新个人 skill",
-        "个人 skills 与开源 skills",
-        "开源 skills 按官方来源安装或更新",
-        "管理器也会检查自身更新",
+        "个人 Agent skills 的生命周期管理器。",
+        "把可复用工作沉淀为私有 skills",
+        "让公开 skills 保持原始来源",
+        "## 三条路径，一份清单",
+        "Agent 先给出脱敏预览",
+        "只记录 canonical source、路径和可选版本",
+        "同一份“想拥有的 skills”状态",
+        "管理器仓库更新",
     ],
     ROOT / "docs" / "README.ja.md": [
-        "新しい個人 skill の作成や既存 skill の更新",
-        "個人 skills とソース管理された公開 skills",
-        "公開 skills は公式ソースから導入・更新",
-        "マネージャー自身の更新も確認",
+        "個人 Agent skills のライフサイクル管理。",
+        "再利用できる作業を非公開 skill にし",
+        "公開 skill は元のソースに紐付けたまま",
+        "## 3 つの経路、1 つのインベントリ",
+        "サニタイズ済みのプレビューを提案",
+        "canonical source、パス、任意の ref だけを記録",
+        "同じ「必要な skills」の状態",
+        "マネージャーの更新を確認",
     ],
 }
 INTERNAL_CLI_MARKERS = [
@@ -103,6 +117,13 @@ class DocumentationTests(unittest.TestCase):
             ROOT / ".github" / "pull_request_template.md",
         ]:
             self.assertTrue(path.is_file(), path)
+
+    def test_lifecycle_diagram_exists_and_is_embedded_in_all_readmes(self):
+        self.assertTrue(LIFECYCLE_SOURCE.is_file())
+        self.assertTrue(LIFECYCLE_DIAGRAM.is_file())
+        self.assertTrue(LIFECYCLE_DIAGRAM.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
+        for document in DOCUMENTS:
+            self.assertIn("skill-lifecycle.png", document.read_text(encoding="utf-8"))
 
     def test_all_languages_include_how_to_use_examples(self):
         for document, markers in HOW_TO_USE_MARKERS.items():

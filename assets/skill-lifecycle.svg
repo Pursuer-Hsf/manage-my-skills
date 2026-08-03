@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">One lifecycle, three safe paths</title>
+  <desc id="desc">A diagram showing how manage-my-skills captures personal work, tracks public skills by source, and reconciles both across machines with safety checks.</desc>
+  <defs>
+    <linearGradient id="teal" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#18b9b2"/>
+      <stop offset="1" stop-color="#0e928e"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff735f"/>
+      <stop offset="1" stop-color="#f14f4f"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#5e6b85"/>
+      <stop offset="1" stop-color="#3e4a61"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1f2937" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#8290a6"/>
+    </marker>
+    <style>
+      .heading { font-family: Arial, Helvetica, sans-serif; fill: #182033; font-weight: 700; }
+      .body { font-family: Arial, Helvetica, sans-serif; fill: #526076; font-weight: 400; }
+      .label { font-family: Arial, Helvetica, sans-serif; fill: #6b7890; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+      .card-title { font-family: Arial, Helvetica, sans-serif; fill: #ffffff; font-size: 28px; font-weight: 700; }
+      .card-copy { font-family: Arial, Helvetica, sans-serif; fill: #ffffff; font-size: 19px; font-weight: 400; }
+      .node { font-family: Arial, Helvetica, sans-serif; fill: #253149; font-size: 20px; font-weight: 700; }
+      .node-copy { font-family: Arial, Helvetica, sans-serif; fill: #68758a; font-size: 17px; font-weight: 400; }
+      .pill { font-family: Arial, Helvetica, sans-serif; fill: #344158; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="#f7f9fc"/>
+  <text x="800" y="92" text-anchor="middle" class="heading" font-size="48">One lifecycle, three safe paths</text>
+  <text x="800" y="132" text-anchor="middle" class="body" font-size="23">Keep what you create private. Keep what you install traceable. Keep every machine aligned.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="198" width="410" height="500" rx="10" fill="#ffffff"/>
+    <rect x="90" y="198" width="410" height="106" rx="10" fill="url(#teal)"/>
+    <rect x="90" y="284" width="410" height="20" fill="url(#teal)"/>
+    <text x="126" y="246" class="card-title">1. Capture your work</text>
+    <text x="126" y="276" class="card-copy">Turn durable work into a private skill.</text>
+
+    <text x="126" y="354" class="label">A TASK REVEALS REUSE</text>
+    <rect x="126" y="380" width="338" height="74" rx="8" fill="#e9f8f7" stroke="#b6e7e4"/>
+    <text x="150" y="413" class="node">Reusable workflow found</text>
+    <text x="150" y="438" class="node-copy">Agent suggests capture or an update.</text>
+    <path d="M295 454 L295 495" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <rect x="126" y="512" width="338" height="74" rx="8" fill="#eef2ff" stroke="#cdd7fb"/>
+    <text x="150" y="545" class="node">Preview and approval</text>
+    <text x="150" y="570" class="node-copy">Nothing changes until you confirm.</text>
+    <path d="M295 586 L295 627" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <rect x="126" y="644" width="338" height="36" rx="8" fill="#182033"/>
+    <text x="295" y="668" text-anchor="middle" class="card-copy" font-size="17">PRIVATE SKILL LIBRARY</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="595" y="198" width="410" height="500" rx="10" fill="#ffffff"/>
+    <rect x="595" y="198" width="410" height="106" rx="10" fill="url(#coral)"/>
+    <rect x="595" y="284" width="410" height="20" fill="url(#coral)"/>
+    <text x="631" y="246" class="card-title">2. Track public sources</text>
+    <text x="631" y="276" class="card-copy">Keep source ownership intact.</text>
+
+    <text x="631" y="354" class="label">MARKETPLACE, PLUGIN, OR REPO</text>
+    <rect x="631" y="380" width="338" height="74" rx="8" fill="#fff0ed" stroke="#ffd0c7"/>
+    <text x="655" y="413" class="node">Public skill installed</text>
+    <text x="655" y="438" class="node-copy">It stays at its canonical source.</text>
+    <path d="M800 454 L800 495" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <rect x="631" y="512" width="338" height="74" rx="8" fill="#fff8e8" stroke="#f8db9b"/>
+    <text x="655" y="545" class="node">Source, path, and ref recorded</text>
+    <text x="655" y="570" class="node-copy">Portable inventory, not a copied fork.</text>
+    <path d="M800 586 L800 627" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <rect x="631" y="644" width="338" height="36" rx="8" fill="#182033"/>
+    <text x="800" y="668" text-anchor="middle" class="card-copy" font-size="17">OFFICIAL INSTALLER OR UPDATER</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1100" y="198" width="410" height="500" rx="10" fill="#ffffff"/>
+    <rect x="1100" y="198" width="410" height="106" rx="10" fill="url(#slate)"/>
+    <rect x="1100" y="284" width="410" height="20" fill="url(#slate)"/>
+    <text x="1136" y="246" class="card-title">3. Reconcile machines</text>
+    <text x="1136" y="276" class="card-copy">Align machines without overwrite.</text>
+
+    <text x="1136" y="354" class="label">PRIVATE CONTENT + SOURCE INVENTORY</text>
+    <rect x="1136" y="380" width="338" height="74" rx="8" fill="#eef2f8" stroke="#d4dbe8"/>
+    <text x="1160" y="413" class="node">One desired skills inventory</text>
+    <text x="1160" y="438" class="node-copy">Private and public records stay separate.</text>
+    <path d="M1305 454 L1305 495" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <g>
+      <rect x="1136" y="514" width="97" height="72" rx="8" fill="#f7f9fc" stroke="#c8d1e0"/>
+      <rect x="1260" y="514" width="97" height="72" rx="8" fill="#f7f9fc" stroke="#c8d1e0"/>
+      <rect x="1384" y="514" width="90" height="72" rx="8" fill="#f7f9fc" stroke="#c8d1e0"/>
+      <rect x="1164" y="531" width="41" height="26" rx="3" fill="#5e6b85"/>
+      <path d="M1173 563 H1196" stroke="#5e6b85" stroke-width="4" stroke-linecap="round"/>
+      <path d="M1184 557 V570" stroke="#5e6b85" stroke-width="4" stroke-linecap="round"/>
+      <rect x="1282" y="528" width="53" height="37" rx="3" fill="#5e6b85"/>
+      <path d="M1291 573 H1326" stroke="#5e6b85" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="1429" cy="543" r="20" fill="#5e6b85"/>
+      <path d="M1412 570 H1446" stroke="#5e6b85" stroke-width="4" stroke-linecap="round"/>
+      <text x="1184" y="613" text-anchor="middle" class="node-copy" font-size="15">LAPTOP</text>
+      <text x="1308" y="613" text-anchor="middle" class="node-copy" font-size="15">SERVER</text>
+      <text x="1429" y="613" text-anchor="middle" class="node-copy" font-size="15">NEW MACHINE</text>
+    </g>
+    <path d="M1305 620 L1305 627" stroke="#8290a6" stroke-width="4" marker-end="url(#arrow)"/>
+    <rect x="1136" y="644" width="338" height="36" rx="8" fill="#182033"/>
+    <text x="1305" y="668" text-anchor="middle" class="card-copy" font-size="17">SAFE, EXPLAINED RESULTS</text>
+  </g>
+
+  <path d="M500 448 C530 448 562 448 595 448" fill="none" stroke="#aab5c7" stroke-width="4" stroke-dasharray="8 9" marker-end="url(#arrow)"/>
+  <path d="M1005 448 C1035 448 1067 448 1100 448" fill="none" stroke="#aab5c7" stroke-width="4" stroke-dasharray="8 9" marker-end="url(#arrow)"/>
+
+  <line x1="90" y1="762" x2="1510" y2="762" stroke="#d7deea" stroke-width="2"/>
+  <text x="90" y="808" class="label">BUILT-IN SAFETY</text>
+  <g>
+    <rect x="355" y="780" width="260" height="52" rx="8" fill="#e9f8f7" stroke="#b6e7e4"/>
+    <text x="485" y="813" text-anchor="middle" class="pill">PRIVATE VERIFIED</text>
+    <rect x="670" y="780" width="260" height="52" rx="8" fill="#fff8e8" stroke="#f8db9b"/>
+    <text x="800" y="813" text-anchor="middle" class="pill">PREVIEW REQUIRED</text>
+    <rect x="985" y="780" width="260" height="52" rx="8" fill="#eef2f8" stroke="#d4dbe8"/>
+    <text x="1115" y="813" text-anchor="middle" class="pill">NO OVERWRITE</text>
+  </g>
+</svg>
