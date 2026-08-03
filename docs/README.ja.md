@@ -4,9 +4,9 @@
 
 # manage-my-skills
 
-**Agent が skill の蓄積・更新を提案し、個人 skills と公開 skills を複数マシンで統一。**
+**価値ある Agent の作業を確認可能な非公開 skill として残し、すべてのマシンで最新の状態に保ちます。**
 
-個人 skills は非公開で同期し、公開 skills は公式ソースから更新します。マネージャー自身の更新も確認します。
+Agent が再利用可能な作業を見つけ、あなたは一度だけ承認します。個人 skills は非公開のまま、公開 skills は元のソースに従い、すべてのマシンを一致させます。
 
 [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 

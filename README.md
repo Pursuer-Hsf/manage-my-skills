@@ -4,9 +4,9 @@
 
 # manage-my-skills
 
-**Automatically capture better workflows and keep every skill consistent across machines.**
+**Turn valuable Agent work into private, reviewable skills that stay current across every machine.**
 
-Personal skills sync privately. Open-source skills stay current from their original sources. The manager checks its own updates when used.
+Your Agent notices reusable work. You approve it once. Personal skills stay private; open-source skills stay at their original sources; every machine stays aligned. The manager checks its own updates when used.
 
 [English](README.md) | [简体中文](docs/README.zh-CN.md) | [日本語](docs/README.ja.md)
 
@@ -209,7 +209,7 @@ The runtime has no third-party Python package dependencies.
 
 ## Contributing
 
-Issues and focused pull requests are welcome. See [AGENTS.md](AGENTS.md).
+Issues and focused pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read [AGENTS.md](AGENTS.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

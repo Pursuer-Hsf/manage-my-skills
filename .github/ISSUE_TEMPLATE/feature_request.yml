@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a focused improvement to personal Agent Skill management.
+title: "feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What personal-skill management problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Describe the smallest useful behavior change.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety impact
+      description: Explain whether it affects preview, approval, privacy, synchronization, or restore behavior.
+    validations:
+      required: true

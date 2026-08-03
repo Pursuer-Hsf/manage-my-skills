@@ -12,6 +12,7 @@ DOCUMENTS = [
 MANAGER_SKILL = ROOT / "skills" / "manage-my-skills" / "SKILL.md"
 MANAGER_AGENT_CONFIG = ROOT / "skills" / "manage-my-skills" / "agents" / "openai.yaml"
 LOGO = ROOT / "assets" / "manage-my-skills-logo.png"
+SOCIAL_PREVIEW = ROOT / "assets" / "social-preview.png"
 HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
         "## How to Use",
@@ -88,6 +89,20 @@ class DocumentationTests(unittest.TestCase):
         for document in DOCUMENTS:
             text = document.read_text(encoding="utf-8")
             self.assertIn("manage-my-skills-logo.png", text)
+
+    def test_community_files_and_social_preview_exist(self):
+        self.assertTrue(SOCIAL_PREVIEW.is_file())
+        self.assertTrue(SOCIAL_PREVIEW.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
+        for path in [
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "CODE_OF_CONDUCT.md",
+            ROOT / "CHANGELOG.md",
+            ROOT / ".github" / "SECURITY.md",
+            ROOT / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml",
+            ROOT / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml",
+            ROOT / ".github" / "pull_request_template.md",
+        ]:
+            self.assertTrue(path.is_file(), path)
 
     def test_all_languages_include_how_to_use_examples(self):
         for document, markers in HOW_TO_USE_MARKERS.items():

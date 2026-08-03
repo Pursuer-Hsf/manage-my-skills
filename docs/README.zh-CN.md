@@ -4,9 +4,9 @@
 
 # manage-my-skills
 
-**Agent 自动提醒沉淀或更新 skill，并让个人与开源 skills 在多台机器保持一致。**
+**让 Agent 把有价值的工作沉淀为可审查的私有 skills，并在所有机器上持续可用。**
 
-个人 skills 私密同步，开源 skills 始终从官方来源更新，管理器也会检查自身更新。
+Agent 识别可复用流程，你确认一次；个人 skills 保持私密，开源 skills 保留原始来源，所有机器保持一致，管理器也会检查自身更新。
 
 [English](../README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
