@@ -19,6 +19,7 @@ HOW_TO_USE_MARKERS = {
     ROOT / "README.md": [
         "## How to Use",
         "### First-time setup",
+        "### Add another machine",
         "### Routine maintenance",
         "### Agent suggests capture or update",
         "### Synchronize servers",
@@ -27,6 +28,7 @@ HOW_TO_USE_MARKERS = {
     ROOT / "docs" / "README.zh-CN.md": [
         "## 如何使用",
         "### 第一次配置",
+        "### 新增一台机器",
         "### 日常维护",
         "### Agent 主动提醒沉淀或更新",
         "### 同步多台服务器",
@@ -35,6 +37,7 @@ HOW_TO_USE_MARKERS = {
     ROOT / "docs" / "README.ja.md": [
         "## 使い方",
         "### 初回設定",
+        "### 別のマシンを追加",
         "### 日常メンテナンス",
         "### Agent から新規作成・更新を提案",
         "### 複数サーバーを同期",
@@ -51,6 +54,7 @@ POSITIONING_MARKERS = {
         "records the canonical source, path, and optional ref",
         "same desired skills state",
         "checks the manager repository for updates",
+        "machines do not need SSH access to one another.",
     ],
     ROOT / "docs" / "README.zh-CN.md": [
         "个人 Agent skills 的生命周期管理器。",
@@ -61,6 +65,7 @@ POSITIONING_MARKERS = {
         "只记录 canonical source、路径和可选版本",
         "同一份“想拥有的 skills”状态",
         "管理器仓库更新",
+        "机器之间不需要 SSH 互通。",
     ],
     ROOT / "docs" / "README.ja.md": [
         "個人 Agent skills のライフサイクル管理。",
@@ -71,6 +76,7 @@ POSITIONING_MARKERS = {
         "canonical source、パス、任意の ref だけを記録",
         "同じ「必要な skills」の状態",
         "マネージャーの更新を確認",
+        "マシン同士の SSH 接続は必要ありません。",
     ],
 }
 INTERNAL_CLI_MARKERS = [
@@ -152,6 +158,10 @@ class DocumentationTests(unittest.TestCase):
             "Import and synchronize only after separate approval.",
             "track-source",
             "sources",
+            "bootstrap",
+            "join",
+            "adopt",
+            "fleet.json",
             "manager-status",
             "re-read this `SKILL.md`",
             "Update this public manager only by fast-forward.",

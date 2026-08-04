@@ -31,7 +31,7 @@ Most skill tools help you install something on one machine. They do not answer t
 | You install a marketplace, plugin, or open-source skill | It records the canonical source, path, and optional ref instead of copying the skill to your private library | Provenance, licensing boundaries, and the original update authority |
 | You add a laptop, workstation, or server | It synchronizes private content and reconciles public skills through their official sources | The right skills on each machine without guessing paths or overwriting work |
 
-The goal is not to copy every skill directory everywhere. It is to let every machine safely reach the same desired skills state.
+The goal is not to copy every skill directory everywhere. It is to let every machine safely reach the same desired skills state. GitHub is the shared hub: machines do not need SSH access to one another.
 
 > **Agent-managed, human-approved.** When invoked, the Agent checks the manager repository for updates and previews every mutation. It never runs a silent background update or push.
 
@@ -76,28 +76,30 @@ Projects such as [Vercel's skills CLI](https://github.com/vercel-labs/skills) an
 flowchart LR
     A["Public: manage-my-skills"] -->|"management logic"| B["Agent"]
     B -->|"discover and classify"| C["Local skill locations"]
-    B -->|"personal content + source inventory"| D["Private: my-skills"]
+    B -->|"personal content + source + fleet inventory"| D["Private: my-skills"]
     B -->|"install / update from official source"| E["Open-source skills"]
+    D -->|"independent pull and reconcile"| F["Other machines"]
     A -. "independent update" .-> A
     D -. "independent synchronization" .-> D
 ```
 
-The public repository contains the manager. The private repository contains personal skills and a portable inventory of open-source sources. Machine-specific paths and credentials stay local. This control-plane separation lets the manager update independently without silently changing personal skills.
+The public repository contains the manager. The private repository contains personal skills, a portable inventory of open-source sources, and optional safe machine labels. Machine-specific paths, credentials, and connection details stay local. Each machine reaches GitHub independently, so a server does not need to reach another server. This control-plane separation lets the manager update independently without silently changing personal skills.
 
 ## Features
 
 - Discover skills in common Codex, shared-agent, and local skill directories.
 - Classify personal, shared-local, managed, and unknown skills.
 - Automatically suggest creating a new personal skill or updating an existing one when reusable value appears.
-- Create a new private GitHub skill library or connect an existing one.
+- Bootstrap a private library on the first machine, then join additional machines independently through GitHub.
 - Import one user-owned skill only after sensitive-content and symlink checks.
+- Adopt an existing personal skill with a preserved local backup before replacing it with a managed link.
 - Track open-source, marketplace, and plugin skills by canonical source, path, and optional version.
 - Reinstall or update source-managed skills through their official mechanism on each machine.
 - Synchronize only allowlisted paths with fast-forward-only Git behavior.
 - Restore skills with a complete no-overwrite preflight and canonical symlinks.
 - Diagnose Git, GitHub authentication, local state, and repository health.
 - Check the public manager for updates when invoked and fast-forward it without touching managed skills.
-- Keep one private source of truth synchronized across workstations and multiple servers while each machine retains local state and authentication.
+- Keep one private source of truth synchronized across workstations and multiple servers while each machine retains its own identity, paths, and authentication.
 
 ## How to Use
 
@@ -108,6 +110,7 @@ Send the repository link to your Agent, then use one of these prompts.
 ```text
 Read this repository and set up manage-my-skills.
 Inventory my personal and open-source skills, then create the private management repository.
+Register this machine, but do not replace or import any existing skill until I approve.
 Preview first, and tell me when login or approval is needed.
 ```
 
@@ -116,6 +119,14 @@ Preview first, and tell me when login or approval is needed.
 ```text
 Connect manage-my-skills to my private skills repository OWNER/my-skills.
 Check for conflicts first and do not overwrite existing skills.
+```
+
+### Add another machine
+
+```text
+Set up manage-my-skills on this machine and join OWNER/my-skills.
+Register this machine as worker-a, then preview restoration and public-skill reconciliation.
+This machine may only reach GitHub. Do not assume it can SSH to other machines.
 ```
 
 ### Routine maintenance
@@ -142,15 +153,15 @@ If no related skill exists, the Agent suggests creating one instead. Nothing cha
 
 ```text
 Keep skills consistent across server-a, server-b, and server-c.
-Check manage-my-skills for updates on each machine first.
-Sync personal skills privately; install or update open-source skills from their official sources.
-Check one machine at a time, do not overwrite anything, and summarize the results.
+Use the private library as the shared hub; do not assume servers can reach one another.
+On each machine, check the manager, local registration, personal links, and public sources.
+Preview every repair, do not overwrite anything, and summarize the local results.
 ```
 
 ### Restore on a new machine
 
 ```text
-Restore my managed skills from OWNER/my-skills on this machine.
+Join this machine to OWNER/my-skills, then restore my managed skills.
 Restore personal skills and reinstall or update open-source skills from their recorded sources.
 Check for conflicts first and do not overwrite anything.
 ```
@@ -168,6 +179,7 @@ Do not change or synchronize my private skills library.
 ```text
 my-skills/
 ├── library.json
+├── fleet.json        # optional safe machine IDs, labels, and roles
 └── skills/
     └── your-skill/
         ├── SKILL.md
@@ -176,7 +188,7 @@ my-skills/
         └── assets/
 ```
 
-`library.json` keeps the portable inventory for source-managed skills. It stores identifiers, paths, and optional refs, never executable installation commands.
+`library.json` keeps the portable inventory for source-managed skills. It stores identifiers, paths, and optional refs, never executable installation commands. Optional `fleet.json` lists only random machine IDs, safe labels, roles, and enabled state. It never stores hostnames, IP addresses, SSH aliases, paths, or credentials.
 
 Local connection state defaults to:
 
@@ -184,23 +196,25 @@ Local connection state defaults to:
 ~/.config/manage-my-skills/state.json
 ```
 
-It contains repository identity, local paths, schema version, and timestamps only. It must not contain credentials.
+It contains repository identity, local paths, schema version, timestamps, and the local machine's random ID and safe label. It must not contain credentials.
 
 ## Safety Model
 
 - Changes are previewed and require explicit approval.
 - The skills repository must be verified as Private.
+- An existing local checkout must point to that verified repository.
 - Credentials stay in GitHub or the operating system credential store.
 - Sensitive-looking content, unsafe links, conflicts, and existing targets stop the workflow.
 - The manager never overwrites, force-pushes, or automatically merges.
 - The public manager updates only by fast-forward and stops on local changes or divergent history.
 - Open-source, marketplace, plugin, and bundled skills keep their original update authority; only portable source metadata is synchronized.
+- Fleet registration stores no connection details. A local check describes only the current machine unless a separate reporting channel is configured.
 
 Automated checks reduce risk but cannot prove content is safe. See [SECURITY.md](SECURITY.md).
 
 ## Compatibility and Scope
 
-`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first. Other filesystem-capable Agents can use the bundled skill with Python 3.9+, Git, and GitHub access. Discovery paths and automatic behavior may differ by Agent.
+`manage-my-skills` uses the open [`SKILL.md` format](https://agentskills.io/) and is Codex-first. Other filesystem-capable Agents can use the bundled skill with Python 3.9+, Git, and GitHub access. Each machine needs its own GitHub access; SSH between machines is optional and never required for synchronization. Discovery paths and automatic behavior may differ by Agent.
 
 ## Troubleshooting
 

@@ -1,12 +1,12 @@
 ---
 name: manage-my-skills
-description: Automatically detect when reusable workflows should become new or updated personal skills, safely manage personal and source-installed open-source agent skills across multiple machines, and keep this manager current. Use when organizing, installing, updating, backing up, synchronizing, restoring, or diagnosing skills; managing a private skill library; or preserving a reusable workflow from the current task.
+description: Automatically detect when reusable workflows should become new or updated personal skills, safely manage personal and source-installed open-source agent skills across independently connected machines, and keep this manager current. Use when organizing, installing, updating, backing up, synchronizing, restoring, joining, or diagnosing skills; managing a private skill library; or preserving a reusable workflow from the current task.
 license: MIT
 ---
 
 # Manage My Skills
 
-Manage the public manager and the user's private skill library as two independent repositories. Never place private skills, credentials, machine configuration, or personal inventory in this public repository.
+Manage the public manager and the user's private skill library as two independent repositories. Never place private skills, credentials, local paths, connection details, or personal inventory in this public repository.
 
 ## Start Every Workflow
 
@@ -22,17 +22,26 @@ If the update check cannot reach the remote, report that the version is unverifi
 ## Choose The Workflow
 
 - Inventory or classification: run `scan`; consult [classification.md](references/classification.md).
-- First private backup: follow [github-onboarding.md](references/github-onboarding.md), then run `setup`.
-- Existing private backup: preview and run `connect`; it must verify privacy and write only local state, never repository files.
-- Add a user-owned skill: run `import` without `--apply`, show the destination, then apply. Run `sync` separately.
+- First managed machine: follow [github-onboarding.md](references/github-onboarding.md), then preview and run `bootstrap`. It creates or verifies the private library and registers only the current machine.
+- Another machine: preview and run `join`, then run `restore` separately. Each machine connects independently to GitHub; do not require machines to reach one another by SSH.
+- Existing private backup without a machine registration: inspect it first. Use `connect` only to save an existing local connection without repository changes; otherwise preview `join` to add this machine to the private fleet inventory.
+- Add a user-owned skill outside a managed target root: run `import` without `--apply`, show the destination, then apply. Run `sync` separately.
+- Take over an existing personal skill in a managed target root: run `adopt` without `--apply`. It must preserve a local backup, verify the copied content, and create a link only after approval. Run `sync` separately.
 - Track an open-source, marketplace, or plugin skill: confirm its canonical public source, then preview and run `track-source`. Never copy it into the private `skills/` directory.
 - Reconcile source-managed skills: run `sources`; compare the desired source, path, and ref with the current machine, then use the source's official installer or updater after preview and approval.
-- Check backup state: run `status`; translate Git output into ordinary language.
+- Check backup and machine registration: run `status` or `machine-status`; translate Git output into ordinary language.
 - Publish private changes: run `sync` without `--apply`, review the file list, then apply.
 - Restore a machine: run `restore` without `--apply`, verify every target, then apply. Reconcile every source-managed skill separately through its official source.
 - Diagnose failure: run `doctor`; ask the user only for browser login, MFA, or permission approval that the Agent cannot complete.
 - Update this manager: run `manager-status`, then preview and run `update-manager` only when the state is `update-available`. Do not invoke private-library synchronization as part of the update.
-- Manage several machines: check and update the public manager independently on each machine before reconciling personal and source-managed skills.
+
+## Multi-Machine Model
+
+GitHub is the shared hub, not a remote-control channel. The private library contains personal skills, the portable public-source inventory, and an optional `fleet.json` with only machine UUIDs, safe labels, roles, and enabled state. Each machine keeps its own checkout path, skill target, credentials, and local state.
+
+On a new machine, the Agent must create a new random machine UUID and register it through `join`; never infer identity from a hostname, IP address, or path. When previewing a new UUID, carry that reviewed UUID into the approved apply command. If local identity is missing, incomplete, duplicated, or absent from `fleet.json`, stop before adoption or treating the machine as registered, then explain how to register or repair it.
+
+Do not claim that a local check knows the live state of another machine. Without a direct connection or an explicitly configured reporting channel, a machine can only reconcile its own state when its Agent is invoked.
 
 ## Suggest Reusable Skill Capture Or Update
 
@@ -49,18 +58,19 @@ Do not suggest capture for trivial one-off work, third-party instructions, or co
 
 ## Non-Negotiable Safety Rules
 
-Read [safety.md](references/safety.md) before any setup, import, sync, or restore operation.
+Read [safety.md](references/safety.md) before any setup, bootstrap, join, adopt, import, sync, or restore operation.
 
 - Keep preview mode as the default and require explicit `--apply` for mutation.
-- Verify the backup repository is private through GitHub before copying or pushing skills.
-- Let `gh` or the operating system credential manager own authentication. Never store tokens in project files or state JSON.
+- Verify the backup repository is private through GitHub and its local checkout points to that exact repository before copying, registering, restoring, or pushing private-library content.
+- Let `gh` or the operating system credential manager own authentication. Never store tokens in project files, `fleet.json`, or state JSON.
 - Treat only user-authored skills as private-backup candidates. Track third-party, bundled, marketplace, and plugin skills by canonical source and reinstall or update them through their official mechanism.
-- Never store executable installation commands, credentials, or machine-local paths in the portable source inventory.
-- Stop on secret-scan findings, existing restore targets, non-fast-forward history, conflicts, or staged paths outside `library.json` and `skills/`.
+- Never store executable installation commands, credentials, connection details, or machine-local paths in the portable source inventory or fleet inventory.
+- Stop on secret-scan findings, existing restore targets, duplicate fleet identity, non-fast-forward history, conflicts, or staged paths outside `library.json`, `fleet.json`, and `skills/`.
+- `adopt` must preserve a backup and must never delete or overwrite a skill.
 - Never run `git add -A`, force-push, rewrite history, silently resolve conflicts, or delete/overwrite a skill.
 - Update this public manager only by fast-forward. Stop on a dirty worktree, local-ahead history, divergence, or detached HEAD.
 - Do not use ignored directories as private storage. Ignored files do not synchronize and can be removed by cleanup commands such as `git clean -xfd`.
 
 ## Support Boundary
 
-Automatic discovery is Codex-first and also checks common shared skill locations. Manager update checks run when this management workflow is invoked, not as a background daemon. Personal skills synchronize as private content; open-source skills synchronize as a portable desired-source inventory and are reconciled on each machine through their official installer. Other Agents can use this repository with filesystem, Git, GitHub, and network access, but automatic invocation differs by platform.
+Automatic discovery is Codex-first and also checks common shared skill locations. Manager update checks run when this management workflow is invoked, not as a background daemon. Personal skills synchronize as private content; open-source skills synchronize as a portable desired-source inventory and are reconciled on each machine through their official installer. Other Agents can use this repository with filesystem, Git, GitHub, and network access, but automatic invocation, source installation, and symlink support differ by platform.

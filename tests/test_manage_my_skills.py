@@ -28,6 +28,15 @@ def write_skill(path: Path, body: str = "# Example\n") -> None:
     )
 
 
+def initialize_library_checkout(path: Path, repo: str = "OWNER/my-skills") -> None:
+    subprocess.run(["git", "init", str(path)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(path), "remote", "add", "origin", f"https://github.com/{repo}.git"],
+        check=True,
+        capture_output=True,
+    )
+
+
 def manager_repo_pair(base: Path) -> tuple[Path, Path]:
     source = base / "manager-source"
     checkout = base / "manager-checkout"
@@ -87,7 +96,7 @@ class ManagerTests(unittest.TestCase):
             library = base / "library"
             state = base / "state.json"
             write_skill(library / "skills" / "alpha")
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             before = sorted(str(path.relative_to(library)) for path in library.rglob("*") if ".git" not in path.parts)
             with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
                 manager, "verify_private_repo", return_value={"isPrivate": True}
@@ -101,6 +110,33 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(before, after)
             self.assertEqual(json.loads(state.read_text())["private_repo"], "OWNER/my-skills")
             verify.assert_called_once_with("OWNER/my-skills")
+
+    def test_connect_rejects_mismatched_origin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(library / "skills" / "alpha")
+            initialize_library_checkout(library, "OWNER/other-skills")
+            with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
+                manager, "verify_private_repo", return_value={"isPrivate": True}
+            ):
+                code = manager.main([
+                    "connect", "--repo", "OWNER/my-skills",
+                    "--library-dir", str(library), "--state-file", str(state), "--apply",
+                ])
+            self.assertEqual(code, 2)
+            self.assertFalse(state.exists())
+
+    def test_github_repository_from_remote_accepts_https_and_ssh(self):
+        self.assertEqual(
+            manager.github_repository_from_remote("https://github.com/OWNER/my-skills.git"),
+            "owner/my-skills",
+        )
+        self.assertEqual(
+            manager.github_repository_from_remote("git@github.com:OWNER/my-skills.git"),
+            "owner/my-skills",
+        )
 
     def test_repo_info_uses_fields_supported_by_older_gh(self):
         result = subprocess.CompletedProcess(
@@ -147,6 +183,15 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertEqual((checkout / "version.txt").read_text(), "v1\n")
             self.assertTrue((checkout / "local.txt").is_file())
+
+    def test_refresh_library_stops_when_local_history_is_ahead(self):
+        library = Path("/tmp/library")
+        with mock.patch.object(manager, "worktree_dirty", return_value=False), mock.patch.object(
+            manager, "ahead_behind", return_value=(1, 0)
+        ), mock.patch.object(manager, "git") as git:
+            with self.assertRaises(manager.ManagerError):
+                manager.refresh_library_for_mutation(library)
+        git.assert_called_once_with(library, "fetch", "origin")
 
     def test_import_preview_does_not_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -208,7 +253,7 @@ class ManagerTests(unittest.TestCase):
             library = base / "library"
             state = base / "state.json"
             write_skill(source)
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             manager.write_json(state, {
                 "schema_version": 1,
                 "private_repo": "OWNER/my-skills",
@@ -254,7 +299,7 @@ class ManagerTests(unittest.TestCase):
             library = base / "library"
             state = base / "state.json"
             manager.ensure_library_files(library, "OWNER/my-skills")
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             manager.write_json(state, {
                 "schema_version": 1,
                 "private_repo": "OWNER/my-skills",
@@ -290,7 +335,7 @@ class ManagerTests(unittest.TestCase):
             library = base / "library"
             state = base / "state.json"
             manager.ensure_library_files(library, "OWNER/my-skills")
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             manifest = manager.load_library_manifest(library)
             manifest["sources"] = [{
                 "name": "example-skill",
@@ -408,7 +453,7 @@ class ManagerTests(unittest.TestCase):
             library = base / "library"
             target = base / "target"
             write_skill(library / "skills" / "alpha")
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             write_skill(target / "alpha")
             with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
                 manager, "verify_private_repo", return_value={"isPrivate": True}
@@ -443,7 +488,7 @@ class ManagerTests(unittest.TestCase):
             target = base / "target"
             write_skill(library / "skills" / "alpha")
             write_skill(library / "skills" / "zeta")
-            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            initialize_library_checkout(library)
             write_skill(target / "zeta")
             with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
                 manager, "verify_private_repo", return_value={"isPrivate": True}
@@ -455,6 +500,56 @@ class ManagerTests(unittest.TestCase):
                 ])
             self.assertEqual(code, 2)
             self.assertFalse((target / "alpha").exists())
+
+    def test_restore_requires_registered_machine_when_fleet_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            target = base / "target"
+            state = base / "state.json"
+            write_skill(library / "skills" / "alpha")
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            manager.write_json(library / "fleet.json", {
+                "schema_version": manager.FLEET_SCHEMA_VERSION,
+                "machines": [{
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "label": "first-machine",
+                    "roles": [],
+                    "enabled": True,
+                }],
+            })
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": "00000000-0000-4000-8000-000000000002",
+                "machine_label": "second-machine",
+                "target_root": str(target),
+            })
+            code = manager.main([
+                "restore", "--repo", "OWNER/my-skills", "--library-dir", str(library),
+                "--target", str(target), "--state-file", str(state),
+            ])
+            self.assertEqual(code, 2)
+            self.assertFalse(target.exists())
+
+    def test_restore_rejects_skill_link_outside_its_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            target = base / "target"
+            source = library / "skills" / "alpha"
+            outside = base / "outside.txt"
+            write_skill(source)
+            outside.write_text("private\\n", encoding="utf-8")
+            (source / "outside.txt").symlink_to(outside)
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            code = manager.main([
+                "restore", "--repo", "OWNER/my-skills", "--library-dir", str(library),
+                "--target", str(target), "--state-file", str(base / "state.json"),
+            ])
+            self.assertEqual(code, 2)
+            self.assertFalse(target.exists())
 
     def test_staged_allowlist_rejects_other_top_level_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -492,6 +587,263 @@ class ManagerTests(unittest.TestCase):
             data = json.loads(output.getvalue())
             self.assertEqual(data["skills"], ["alpha"])
             self.assertEqual(data["sources"][0]["name"], "example-skill")
+
+    def test_bootstrap_preview_does_not_create_library_or_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            code = manager.main([
+                "bootstrap", "--repo", "OWNER/my-skills", "--label", "test-machine",
+                "--library-dir", str(library), "--state-file", str(state),
+            ])
+            self.assertEqual(code, 0)
+            self.assertFalse(library.exists())
+            self.assertFalse(state.exists())
+
+    def test_bootstrap_apply_creates_registered_machine_and_fleet(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            target = base / "target"
+            with mock.patch.object(manager, "ensure_private_checkout"), mock.patch.object(
+                manager, "refresh_library_for_mutation"
+            ), mock.patch.object(manager, "commit_and_push_library") as commit:
+                code = manager.main([
+                    "bootstrap", "--repo", "OWNER/my-skills", "--label", "test-machine",
+                    "--role", "gpu", "--library-dir", str(library), "--target", str(target),
+                    "--state-file", str(state), "--apply",
+                ])
+            self.assertEqual(code, 0)
+            saved = manager.load_state(state)
+            self.assertEqual(saved["schema_version"], manager.STATE_SCHEMA_VERSION)
+            self.assertEqual(saved["machine_label"], "test-machine")
+            self.assertEqual(saved["target_root"], str(target.resolve()))
+            fleet = manager.load_fleet(library, required=True)
+            self.assertEqual(fleet["machines"][0]["label"], "test-machine")
+            self.assertEqual(fleet["machines"][0]["roles"], ["gpu"])
+            commit.assert_called_once_with(library.resolve(), "Bootstrap personal skill library")
+
+    def test_join_registers_second_machine_without_restoring_skills(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            target = base / "target"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manager.write_json(library / "fleet.json", manager.fleet_manifest())
+            with mock.patch.object(manager, "ensure_private_checkout"), mock.patch.object(
+                manager, "refresh_library_for_mutation"
+            ), mock.patch.object(manager, "commit_and_push_library") as commit:
+                code = manager.main([
+                    "join", "--repo", "OWNER/my-skills", "--label", "server-gpu",
+                    "--role", "gpu", "--library-dir", str(library), "--target", str(target),
+                    "--state-file", str(state), "--apply",
+                ])
+            self.assertEqual(code, 0)
+            self.assertFalse(target.exists())
+            self.assertEqual(manager.load_state(state)["machine_label"], "server-gpu")
+            self.assertEqual(manager.load_fleet(library)["machines"][0]["label"], "server-gpu")
+            commit.assert_called_once_with(library.resolve(), "Register machine server-gpu")
+
+    def test_fleet_rejects_connection_and_unknown_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            library = Path(tmp) / "library"
+            library.mkdir()
+            manager.write_json(library / "fleet.json", {
+                "schema_version": 1,
+                "machines": [{
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "label": "server-gpu",
+                    "ssh_alias": "server-gpu",
+                }],
+            })
+            with self.assertRaises(manager.ManagerError):
+                manager.load_fleet(library, required=True)
+
+    def test_staged_allowlist_permits_fleet_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+            manager.write_json(repo / "fleet.json", manager.fleet_manifest())
+            subprocess.run(["git", "-C", str(repo), "add", "fleet.json"], check=True)
+            manager.assert_allowed_staged_paths(repo)
+
+    def test_library_commit_includes_fleet_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            library = Path(tmp) / "library"
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(library), "config", "user.name", "Test User"], check=True)
+            subprocess.run(["git", "-C", str(library), "config", "user.email", "test@example.invalid"], check=True)
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manager.ensure_fleet(library)
+            self.assertTrue(manager.git_commit_if_needed(library, "Initialize fleet"))
+            files = subprocess.run(
+                ["git", "-C", str(library), "show", "--format=", "--name-only", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.splitlines()
+            self.assertIn("fleet.json", files)
+            self.assertIn("library.json", files)
+
+    def test_machine_status_reports_registered_local_machine(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            machine_id = "00000000-0000-4000-8000-000000000001"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            manager.write_json(library / "fleet.json", {
+                "schema_version": 1,
+                "machines": [{
+                    "id": machine_id,
+                    "label": "test-machine",
+                    "roles": [],
+                    "enabled": True,
+                }],
+            })
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": machine_id,
+                "machine_label": "test-machine",
+                "target_root": str(base / "target"),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main(["machine-status", "--state-file", str(state), "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output.getvalue())
+            self.assertEqual(data["machine"]["label"], "test-machine")
+            self.assertTrue(data["fleet"]["registered"])
+
+    def test_legacy_state_upgrades_without_machine_registration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            state = base / "state.json"
+            library = base / "library"
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            manager.save_state("OWNER/my-skills", library, state)
+            saved = manager.load_state(state)
+            self.assertEqual(saved["schema_version"], manager.STATE_SCHEMA_VERSION)
+            self.assertNotIn("machine_id", saved)
+            self.assertIsNone(manager.local_machine(saved))
+
+    def test_existing_machine_identity_cannot_be_replaced(self):
+        state = {
+            "schema_version": manager.STATE_SCHEMA_VERSION,
+            "machine_id": "00000000-0000-4000-8000-000000000001",
+            "machine_label": "test-machine",
+            "target_root": "/tmp/target",
+        }
+        args = manager.argparse.Namespace(
+            machine_id="00000000-0000-4000-8000-000000000002",
+            label="test-machine",
+            target=None,
+        )
+        with self.assertRaises(manager.ManagerError):
+            manager.requested_machine(args, state)
+
+    def test_adopt_preview_does_not_move_or_link_existing_skill(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            target = base / "target"
+            source = target / "alpha"
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(source)
+            initialize_library_checkout(library)
+            manager.write_json(library / "fleet.json", {
+                "schema_version": manager.FLEET_SCHEMA_VERSION,
+                "machines": [{
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "label": "test-machine",
+                    "roles": [],
+                    "enabled": True,
+                }],
+            })
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": "00000000-0000-4000-8000-000000000001",
+                "machine_label": "test-machine",
+                "target_root": str(target),
+            })
+            code = manager.main(["adopt", str(source), "--state-file", str(state)])
+            self.assertEqual(code, 0)
+            self.assertTrue(source.is_dir())
+            self.assertFalse(source.is_symlink())
+            self.assertFalse((library / "skills" / "alpha").exists())
+
+    def test_adopt_rejects_unregistered_machine(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            target = base / "target"
+            source = target / "alpha"
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(source)
+            subprocess.run(["git", "init", str(library)], check=True, capture_output=True)
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": "00000000-0000-4000-8000-000000000001",
+                "machine_label": "test-machine",
+                "target_root": str(target),
+            })
+            code = manager.main(["adopt", str(source), "--state-file", str(state)])
+            self.assertEqual(code, 2)
+            self.assertTrue(source.is_dir())
+            self.assertFalse(source.is_symlink())
+            self.assertFalse((library / "skills" / "alpha").exists())
+
+    def test_adopt_apply_preserves_backup_and_creates_managed_link(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            target = base / "target"
+            source = target / "alpha"
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(source, "# Managed example\n")
+            initialize_library_checkout(library)
+            manager.write_json(library / "fleet.json", {
+                "schema_version": manager.FLEET_SCHEMA_VERSION,
+                "machines": [{
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "label": "test-machine",
+                    "roles": [],
+                    "enabled": True,
+                }],
+            })
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": "00000000-0000-4000-8000-000000000001",
+                "machine_label": "test-machine",
+                "target_root": str(target),
+            })
+            with mock.patch.object(manager, "require_gh_auth"), mock.patch.object(
+                manager, "verify_private_repo", return_value={"isPrivate": True}
+            ):
+                code = manager.main(["adopt", str(source), "--state-file", str(state), "--apply"])
+            self.assertEqual(code, 0)
+            library_skill = library / "skills" / "alpha"
+            backup = base / ".manage-my-skills-backups" / "alpha"
+            self.assertTrue(library_skill.is_dir())
+            self.assertTrue(backup.is_dir())
+            self.assertTrue(source.is_symlink())
+            self.assertEqual(source.resolve(), library_skill.resolve())
+            self.assertEqual(manager.skill_fingerprint(backup), manager.skill_fingerprint(library_skill))
 
 
 if __name__ == "__main__":

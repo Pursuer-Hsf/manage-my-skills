@@ -6,7 +6,7 @@
 
 - Search existing issues and discussions before opening a new one.
 - Never include personal skills, credentials, internal hostnames, private repositories, or machine paths in issues, fixtures, screenshots, or pull requests.
-- Discuss changes to safety behavior before implementing them. Preview-by-default, private-repository verification, allowlisted staging, and no-overwrite restore behavior are project invariants.
+- Discuss changes to safety behavior before implementing them. Preview-by-default, private-repository verification, allowlisted staging, adoption backup, fleet privacy, and no-overwrite restore behavior are project invariants.
 
 ## Good Contributions
 

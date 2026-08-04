@@ -13,4 +13,6 @@ Symlinks describe installation, not ownership. Resolve the link and classify the
 
 The built-in scanner uses path-based hints and can be wrong. The Agent must confirm ownership before import.
 
+When an owned skill already occupies the registered managed target root, use `adopt` rather than `import`. `adopt` creates a verified private copy, preserves a local backup, and then replaces only that original directory with a link. Do not bulk-adopt or infer ownership from a path.
+
 For source-managed skills, record only portable source metadata: name, source kind, canonical source, optional path, and optional branch, tag, or commit. Do not store executable installation commands or machine-local paths.
