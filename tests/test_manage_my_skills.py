@@ -691,6 +691,34 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(data["skills"], ["alpha"])
             self.assertEqual(data["sources"][0]["name"], "example-skill")
 
+    def test_status_reports_pending_private_skill_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            write_skill(library / "skills" / "alpha", "original\n")
+            initialize_library_checkout(library)
+            subprocess.run(["git", "-C", str(library), "config", "user.name", "Test User"], check=True)
+            subprocess.run(["git", "-C", str(library), "config", "user.email", "test@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(library), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(library), "commit", "-m", "Initial"], check=True, capture_output=True)
+            (library / "skills" / "alpha" / "SKILL.md").write_text(
+                "---\nname: example\ndescription: Example user-owned skill.\n---\n\nupdated\n",
+                encoding="utf-8",
+            )
+            manager.write_json(state, {
+                "schema_version": 1,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main(["status", "--state-file", str(state), "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output.getvalue())
+            self.assertEqual(data["pending_skill_changes"], ["alpha"])
+            self.assertTrue(data["pending_sync"])
+
     def test_bootstrap_preview_does_not_create_library_or_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

@@ -135,6 +135,7 @@ flowchart LR
 检查并维护我的全部 skills。
 提醒应该新建或更新的个人 skill，并报告开源 skills 的安装或版本差异。
 同时检查 manage-my-skills 自身是否需要更新。
+如果私有 skill 发生变化，自动展示同步预览。
 我确认后再修改。
 ```
 

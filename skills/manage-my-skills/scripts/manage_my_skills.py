@@ -1102,6 +1102,18 @@ def ahead_behind(library_dir: Path) -> tuple[int, int]:
     return int(counts[0]), int(counts[1])
 
 
+def changed_skill_names(changes: Iterable[str]) -> list[str]:
+    names: set[str] = set()
+    for line in changes:
+        path = line[3:].strip() if len(line) >= 3 else ""
+        if " -> " in path:
+            path = path.rsplit(" -> ", 1)[1]
+        parts = PurePosixPath(path).parts
+        if len(parts) >= 2 and parts[0] == "skills":
+            names.add(parts[1])
+    return sorted(names)
+
+
 def command_sync(args: argparse.Namespace) -> None:
     repo, library_dir, _ = resolved_library(args)
     if not (library_dir / ".git").exists():
@@ -1111,9 +1123,12 @@ def command_sync(args: argparse.Namespace) -> None:
     findings = scan_secrets(library_dir / "skills") if (library_dir / "skills").exists() else []
     if findings:
         fail("Sync blocked by sensitive-looking content:\n- " + "\n- ".join(findings))
-    status = git(library_dir, "status", "--short").stdout.strip()
+    changes = git(library_dir, "status", "--short").stdout.splitlines()
     say("Local changes:")
-    say(status or "(none)")
+    say("\n".join(changes) or "(none)")
+    pending_skills = changed_skill_names(changes)
+    if pending_skills:
+        say("Private skills pending sync: " + ", ".join(pending_skills))
     if not args.apply:
         say("Preview only. Re-run with --apply to fetch, commit allowlisted files, and push.")
         return
@@ -1150,6 +1165,8 @@ def command_status(args: argparse.Namespace) -> None:
         "skills": [],
         "sources": [],
         "changes": None,
+        "pending_skill_changes": [],
+        "pending_sync": False,
         "machine": machine,
         "fleet": {
             "configured": fleet is not None,
@@ -1165,6 +1182,8 @@ def command_status(args: argparse.Namespace) -> None:
         data["sources"] = load_library_manifest(library_dir)["sources"]
     if data["git_repository"]:
         data["changes"] = git(library_dir, "status", "--short").stdout.splitlines()
+        data["pending_skill_changes"] = changed_skill_names(data["changes"])
+        data["pending_sync"] = bool(data["changes"])
     if args.json:
         print(json.dumps(data, indent=2))
         return
@@ -1183,6 +1202,16 @@ def command_status(args: argparse.Namespace) -> None:
     else:
         say(f"Fleet registration: current machine is not registered ({len(fleet['machines'])} machines)")
     say(f"Uncommitted changes: {len(data['changes'] or [])}")
+    if data["pending_skill_changes"]:
+        say(f"Pending private skill sync: {len(data['pending_skill_changes'])}")
+        for name in data["pending_skill_changes"]:
+            say(f"- {name}")
+        say("Sync preview: review and approve the proposed private-library publish before applying.")
+    elif data["changes"]:
+        say(f"Pending private-library sync changes: {len(data['changes'])}")
+        say("Sync preview: review and approve the proposed private-library publish before applying.")
+    else:
+        say("Pending private skill sync: 0")
 
 
 def command_machine_status(args: argparse.Namespace) -> None:

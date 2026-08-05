@@ -12,7 +12,7 @@ Manage the public manager and the user's private skill library as two independen
 
 1. Locate this skill's `scripts/manage_my_skills.py`.
 2. Run `manager-status` once. If a fast-forward update is available, report it and offer to update the public manager before changing managed skills. After an update, re-read this `SKILL.md` before continuing.
-3. Run `doctor` and `scan` before proposing managed-skill changes.
+3. Run `doctor`, `scan`, and `status` before proposing managed-skill changes. If `status` reports pending private skill changes, automatically run `sync` without `--apply` and include that preview in the report.
 4. Explain the result in plain language. Do not assume the user knows Git or GitHub.
 5. Preview mutating commands first. Use `--apply` only after the user approves the stated files, repository, and effects.
 
@@ -44,7 +44,7 @@ Report all three labels when both `status` and `scan` were run. Installation lin
 - Track an open-source, marketplace, or plugin skill: confirm its canonical public source, then preview and run `track-source`. Never copy it into the private `skills/` directory.
 - Reconcile source-managed skills: run `sources`; compare the desired source, path, and ref with the current machine, then use the source's official installer or updater after preview and approval.
 - Check backup and machine registration: run `status` or `machine-status`; translate Git output into ordinary language.
-- Publish private changes: run `sync` without `--apply`, review the file list, then apply.
+- Publish private changes: after `status` finds pending changes, automatically run `sync` without `--apply`, review the file list, and apply only after explicit approval.
 - Restore a machine: run `restore` without `--apply`, verify every target, then apply. Reconcile every source-managed skill separately through its official source.
 - Diagnose failure: run `doctor`; ask the user only for browser login, MFA, or permission approval that the Agent cannot complete.
 - Update this manager: run `manager-status`, then preview and run `update-manager` only when the state is `update-available`. Do not invoke private-library synchronization as part of the update.
