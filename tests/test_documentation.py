@@ -176,6 +176,9 @@ class DocumentationTests(unittest.TestCase):
             "FETCH_HEAD",
             "Before GitHub-dependent work",
             "local private skill changes",
+            "automatically run `restore` without `--apply`",
+            "Never use a public skill installer",
+            "After private-library synchronization, inspect managed links.",
         ]:
             self.assertIn(marker, text)
 

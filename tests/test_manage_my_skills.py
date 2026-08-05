@@ -767,6 +767,35 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(data["remote"]["skill_changes"], ["alpha"])
             self.assertTrue(data["pending_sync"])
 
+    def test_status_reports_managed_link_health(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            target = base / "target"
+            state = base / "state.json"
+            write_skill(library / "skills" / "alpha")
+            write_skill(library / "skills" / "beta")
+            initialize_library_checkout(library)
+            target.mkdir(parents=True)
+            (base / "wrong-target").mkdir()
+            (target / "beta").symlink_to(base / "wrong-target", target_is_directory=True)
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+                "machine_id": "00000000-0000-4000-8000-000000000001",
+                "machine_label": "test-machine",
+                "target_root": str(target),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main(["status", "--state-file", str(state), "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output.getvalue())
+            self.assertEqual([item["name"] for item in data["links"]["missing"]], ["alpha"])
+            self.assertEqual([item["name"] for item in data["links"]["wrong"]], ["beta"])
+            self.assertTrue(data["links"]["restore_needed"])
+
     def test_bootstrap_preview_does_not_create_library_or_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

@@ -155,7 +155,7 @@ If no related skill exists, the Agent suggests creating one instead. Nothing cha
 ```text
 Keep skills consistent across server-a, server-b, and server-c.
 Use the private library as the shared hub; do not assume servers can reach one another.
-On each machine, check the manager, local registration, personal links, and public sources.
+On each machine, check the manager, local registration, personal links, and public sources. After private-library sync, preview restore for any missing or incorrect personal links.
 Preview every repair, do not overwrite anything, and summarize the local results.
 ```
 
@@ -163,7 +163,7 @@ Preview every repair, do not overwrite anything, and summarize the local results
 
 ```text
 Join this machine to OWNER/my-skills, then restore my managed skills.
-Restore personal skills and reinstall or update open-source skills from their recorded sources.
+Restore personal skills from the private library and reinstall or update open-source skills from their recorded sources. Do not use a public installer for a skill already in the private library.
 Check for conflicts first and do not overwrite anything.
 ```
 

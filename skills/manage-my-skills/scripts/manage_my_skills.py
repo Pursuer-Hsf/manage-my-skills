@@ -1210,8 +1210,92 @@ def private_remote_status(library_dir: Path) -> dict:
     }
 
 
+def managed_link_status(library_dir: Path, target_root: Path) -> dict:
+    skills_dir = library_dir / "skills"
+    result = {
+        "target_root": str(target_root),
+        "managed": 0,
+        "linked": 0,
+        "missing": [],
+        "broken": [],
+        "wrong": [],
+        "occupied": [],
+        "restore_needed": False,
+    }
+    if not skills_dir.is_dir():
+        return result
+    for skill in sorted(skills_dir.iterdir()):
+        if not (skill / "SKILL.md").is_file():
+            continue
+        result["managed"] += 1
+        target = target_root / skill.name
+        item = {
+            "name": skill.name,
+            "target": str(target),
+            "expected": str(skill),
+        }
+        if target.is_symlink():
+            if target.resolve() == skill.resolve():
+                result["linked"] += 1
+            elif target.exists():
+                result["wrong"].append(item)
+            else:
+                result["broken"].append(item)
+        elif target.exists():
+            result["occupied"].append(item)
+        else:
+            result["missing"].append(item)
+    result["restore_needed"] = any(
+        result[label] for label in ("missing", "broken", "wrong", "occupied")
+    )
+    return result
+
+
+def ownership_conflicts(library_dir: Path) -> list[str]:
+    skills_dir = library_dir / "skills"
+    private_names = {
+        path.name for path in skills_dir.iterdir()
+        if skills_dir.is_dir() and (path / "SKILL.md").is_file()
+    } if skills_dir.is_dir() else set()
+    source_names = {entry["name"] for entry in source_inventory(library_dir)}
+    return sorted(private_names & source_names)
+
+
+def report_restore_preview(library_dir: Path, state_path: Path) -> None:
+    state = load_state(state_path)
+    machine = local_machine(state)
+    if not machine:
+        say("Restore preview blocked: this machine is not registered.")
+        return
+    if (library_dir / FLEET_NAME).exists():
+        try:
+            require_registered_machine(state, library_dir, action="restoring skills")
+        except ManagerError as exc:
+            say(f"Restore preview blocked: {exc}")
+            return
+    conflicts = ownership_conflicts(library_dir)
+    if conflicts:
+        say("Restore preview blocked by private/source ownership conflict: " + ", ".join(conflicts))
+        return
+    target_root = Path(machine["target_root"]).expanduser().resolve()
+    links = managed_link_status(library_dir, target_root)
+    if not links["restore_needed"]:
+        say(f"Restore preview: all {links['managed']} managed skill links are correct.")
+        return
+    conflicts = links["broken"] + links["wrong"] + links["occupied"]
+    if conflicts:
+        say("Restore preview blocked: an existing or incorrect target must be reviewed first.")
+        for item in conflicts:
+            say(f"- {item['name']}: {item['target']}")
+        return
+    say(f"Restore preview: create {len(links['missing'])} managed skill link(s) in {target_root}")
+    for item in links["missing"]:
+        say(f"Plan: link {item['target']} -> {item['expected']}")
+    say("Preview only. Re-run restore with --apply after explicit approval.")
+
+
 def command_sync(args: argparse.Namespace) -> None:
-    repo, library_dir, _ = resolved_library(args)
+    repo, library_dir, state_path = resolved_library(args)
     if not (library_dir / ".git").exists():
         fail(f"Private library is not a Git repository: {library_dir}")
     if (library_dir / FLEET_NAME).exists():
@@ -1252,6 +1336,7 @@ def command_sync(args: argparse.Namespace) -> None:
     if committed or ahead:
         git(library_dir, "push", "origin", "HEAD")
     say("Private library is synchronized.")
+    report_restore_preview(library_dir, state_path)
 
 
 def command_status(args: argparse.Namespace) -> None:
@@ -1282,6 +1367,8 @@ def command_status(args: argparse.Namespace) -> None:
             "skill_changes": [],
             "error": None,
         },
+        "links": None,
+        "ownership_conflicts": [],
         "machine": machine,
         "fleet": {
             "configured": fleet is not None,
@@ -1296,10 +1383,14 @@ def command_status(args: argparse.Namespace) -> None:
     if manifest.exists():
         data["sources"] = load_library_manifest(library_dir)["sources"]
     if data["git_repository"]:
+        data["ownership_conflicts"] = ownership_conflicts(library_dir)
+    if data["git_repository"]:
         data["changes"] = git(library_dir, "status", "--short").stdout.splitlines()
         data["pending_skill_changes"] = changed_skill_names(data["changes"])
         data["remote"] = private_remote_status(library_dir)
         data["pending_sync"] = bool(data["changes"]) or data["remote"]["behind"] > 0
+    if machine and data["git_repository"]:
+        data["links"] = managed_link_status(library_dir, Path(machine["target_root"]).expanduser().resolve())
     if args.json:
         print(json.dumps(data, indent=2))
         return
@@ -1339,10 +1430,23 @@ def command_status(args: argparse.Namespace) -> None:
         )
     elif data["remote"]["state"] in {"remote-unreachable", "remote-unverified"}:
         say(f"Remote private-library status: {data['remote']['state']} ({data['remote']['error']})")
+    if data["links"]:
+        links = data["links"]
+        say(f"Managed skill links: {links['linked']}/{links['managed']} correct")
+        for label in ("missing", "broken", "wrong", "occupied"):
+            if links[label]:
+                say(f"{label.capitalize()} managed links: {len(links[label])}")
+                for item in links[label]:
+                    say(f"- {item['name']}: {item['target']}")
+    if data["ownership_conflicts"]:
+        say("Private/source ownership conflicts: " + ", ".join(data["ownership_conflicts"]))
+        say("Do not install or restore these names until their ownership is reviewed.")
     if data["pending_sync"]:
         say("Sync preview: review and approve the proposed private-library fast-forward or publish before applying.")
     elif data["remote"]["state"] == "current":
         say("Pending private skill sync: 0")
+    if data["links"] and data["links"]["restore_needed"]:
+        say("Restore preview: review and approve the proposed managed-link repair before applying.")
 
 
 def command_machine_status(args: argparse.Namespace) -> None:
@@ -1415,6 +1519,9 @@ def command_restore(args: argparse.Namespace) -> None:
     if library_dir.exists():
         if (library_dir / FLEET_NAME).exists():
             machine = require_registered_machine(state, library_dir, action="restoring skills")
+        conflicts = ownership_conflicts(library_dir)
+        if conflicts:
+            fail("Restore stopped because private/source ownership is ambiguous: " + ", ".join(conflicts))
         create, already_linked = restore_actions(library_dir, target_root)
         source_count = len(source_inventory(library_dir))
         say(f"Plan: create {len(create)} skill links; {already_linked} are already correct")
@@ -1432,6 +1539,9 @@ def command_restore(args: argparse.Namespace) -> None:
     assert_checkout_matches_repository(library_dir, args.repo)
     if (library_dir / FLEET_NAME).exists():
         machine = require_registered_machine(state, library_dir, action="restoring skills")
+    conflicts = ownership_conflicts(library_dir)
+    if conflicts:
+        fail("Restore stopped because private/source ownership is ambiguous: " + ", ".join(conflicts))
     create, already_linked = restore_actions(library_dir, target_root)
     source_count = len(source_inventory(library_dir))
     target_root.mkdir(parents=True, exist_ok=True)
