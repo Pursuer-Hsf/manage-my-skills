@@ -175,7 +175,7 @@ class DocumentationTests(unittest.TestCase):
             "does not require GitHub CLI login",
             "FETCH_HEAD",
             "Before GitHub-dependent work",
-            "pending private skill changes",
+            "local private skill changes",
         ]:
             self.assertIn(marker, text)
 

@@ -60,6 +60,26 @@ def commit_version(repo: Path, version: str) -> None:
     subprocess.run(["git", "-C", str(repo), "commit", "-m", version], check=True, capture_output=True)
 
 
+def private_library_pair(base: Path) -> tuple[Path, Path]:
+    remote = base / "private-remote.git"
+    seed = base / "private-seed"
+    library = base / "private-library"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+    subprocess.run(["git", "init", str(seed)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(seed), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(seed), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(seed), "branch", "-M", "main"], check=True)
+    write_skill(seed / "skills" / "alpha", "original\n")
+    subprocess.run(["git", "-C", str(seed), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(seed), "commit", "-m", "Initial"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(seed), "remote", "add", "origin", str(remote)], check=True)
+    subprocess.run(["git", "-C", str(seed), "push", "-u", "origin", "main"], check=True, capture_output=True)
+    subprocess.run(["git", "clone", str(remote), str(library)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(library), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(library), "config", "user.email", "test@example.invalid"], check=True)
+    return seed, library
+
+
 class ManagerTests(unittest.TestCase):
     def test_add_user_local_bin_to_path(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -717,6 +737,34 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual(code, 0)
             data = json.loads(output.getvalue())
             self.assertEqual(data["pending_skill_changes"], ["alpha"])
+            self.assertTrue(data["pending_sync"])
+
+    def test_status_reports_remote_private_skill_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            seed, library = private_library_pair(base)
+            state = base / "state.json"
+            skill = seed / "skills" / "alpha" / "SKILL.md"
+            skill.write_text(
+                "---\nname: example\ndescription: Example user-owned skill.\n---\n\nupdated\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(seed), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(seed), "commit", "-m", "Update alpha"], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(seed), "push"], check=True, capture_output=True)
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = manager.main(["status", "--state-file", str(state), "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output.getvalue())
+            self.assertEqual(data["remote"]["state"], "update-available")
+            self.assertEqual(data["remote"]["behind"], 1)
+            self.assertEqual(data["remote"]["skill_changes"], ["alpha"])
             self.assertTrue(data["pending_sync"])
 
     def test_bootstrap_preview_does_not_create_library_or_state(self):

@@ -135,7 +135,7 @@ This machine may only reach GitHub. Do not assume it can SSH to other machines.
 Check and maintain all my skills.
 Suggest personal skills to create or update, and report open-source installation or version drift.
 Also check whether manage-my-skills itself needs an update.
-If a private skill changed, automatically show the sync preview.
+If a private skill changed locally or the private repository has a new skill update, automatically show the sync preview.
 Make changes only after I approve.
 ```
 

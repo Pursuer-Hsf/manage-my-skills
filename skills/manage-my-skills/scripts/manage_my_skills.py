@@ -1104,14 +1104,110 @@ def ahead_behind(library_dir: Path) -> tuple[int, int]:
 
 def changed_skill_names(changes: Iterable[str]) -> list[str]:
     names: set[str] = set()
-    for line in changes:
-        path = line[3:].strip() if len(line) >= 3 else ""
+    for raw_line in changes:
+        line = raw_line.rstrip()
+        if "\t" in line:
+            path = line.split("\t")[-1].strip()
+        else:
+            path = line[3:].strip() if len(line) >= 3 else ""
         if " -> " in path:
             path = path.rsplit(" -> ", 1)[1]
         parts = PurePosixPath(path).parts
         if len(parts) >= 2 and parts[0] == "skills":
             names.add(parts[1])
     return sorted(names)
+
+
+def changed_skill_names_from_revision(library_dir: Path, revision: str) -> list[str]:
+    result = git(library_dir, "diff", "--name-status", revision, check=False)
+    if result.returncode:
+        return []
+    return changed_skill_names(result.stdout.splitlines())
+
+
+def private_remote_status(library_dir: Path) -> dict:
+    """Refresh and report the private checkout's upstream without changing tracked files."""
+    base = {
+        "state": "unconfigured",
+        "ahead": 0,
+        "behind": 0,
+        "skill_changes": [],
+        "error": None,
+    }
+    upstream = git(
+        library_dir,
+        "rev-parse",
+        "--abbrev-ref",
+        "--symbolic-full-name",
+        "@{u}",
+        check=False,
+    )
+    if upstream.returncode:
+        return base
+    upstream_ref = upstream.stdout.strip()
+    remote_name = upstream_ref.split("/", 1)[0]
+    if not remote_name:
+        return {**base, "state": "remote-unverified", "error": "Private library upstream is invalid."}
+    remote_url = git(library_dir, "remote", "get-url", remote_name, check=False)
+    if remote_url.returncode:
+        return {
+            **base,
+            "state": "remote-unverified",
+            "error": "Private library upstream remote could not be read.",
+        }
+    if github_https_remote(remote_url.stdout):
+        network_ok, network_detail = github_network_check()
+        if not network_ok:
+            return {**base, "state": "remote-unreachable", "error": network_detail}
+    fetch = git(
+        library_dir,
+        "fetch",
+        "--quiet",
+        remote_name,
+        check=False,
+        timeout=NETWORK_CHECK_TIMEOUT_SECONDS,
+    )
+    if fetch.returncode:
+        detail = (fetch.stderr or fetch.stdout or "private-library remote check failed").strip()
+        return {**base, "state": "remote-unreachable", "error": detail}
+    counts = git(
+        library_dir,
+        "rev-list",
+        "--left-right",
+        "--count",
+        "HEAD...@{u}",
+        check=False,
+    )
+    if counts.returncode:
+        return {
+            **base,
+            "state": "remote-unverified",
+            "error": "Private library remote was fetched, but its history could not be compared.",
+        }
+    values = counts.stdout.split()
+    if len(values) != 2:
+        return {
+            **base,
+            "state": "remote-unverified",
+            "error": "Private library remote returned an unreadable history comparison.",
+        }
+    ahead, behind = (int(values[0]), int(values[1]))
+    if ahead == 0 and behind == 0:
+        state = "current"
+    elif behind and not ahead:
+        state = "update-available"
+    elif ahead and not behind:
+        state = "local-ahead"
+    else:
+        state = "diverged"
+    skill_changes = changed_skill_names_from_revision(library_dir, "HEAD..@{u}") if behind else []
+    return {
+        "state": state,
+        "ahead": ahead,
+        "behind": behind,
+        "skill_changes": skill_changes,
+        "error": None,
+    }
 
 
 def command_sync(args: argparse.Namespace) -> None:
@@ -1123,18 +1219,30 @@ def command_sync(args: argparse.Namespace) -> None:
     findings = scan_secrets(library_dir / "skills") if (library_dir / "skills").exists() else []
     if findings:
         fail("Sync blocked by sensitive-looking content:\n- " + "\n- ".join(findings))
+    verify_private_checkout(repo, library_dir)
     changes = git(library_dir, "status", "--short").stdout.splitlines()
     say("Local changes:")
     say("\n".join(changes) or "(none)")
     pending_skills = changed_skill_names(changes)
     if pending_skills:
         say("Private skills pending sync: " + ", ".join(pending_skills))
+    remote = private_remote_status(library_dir)
+    if remote["state"] == "update-available":
+        say(f"Remote private-library updates: {remote['behind']} commit(s) available")
+        if remote["skill_changes"]:
+            say("Remote private skills pending sync: " + ", ".join(remote["skill_changes"]))
+        else:
+            say("Remote changes contain library metadata but no skill file changes.")
+    elif remote["state"] in {"local-ahead", "diverged"}:
+        say(f"Remote history state: {remote['state']} (ahead {remote['ahead']}, behind {remote['behind']})")
+    elif remote["state"] in {"remote-unreachable", "remote-unverified"}:
+        say(f"Remote private-library status: {remote['state']} ({remote['error']})")
     if not args.apply:
-        say("Preview only. Re-run with --apply to fetch, commit allowlisted files, and push.")
+        say("Preview only. Re-run with --apply to fast-forward, commit allowlisted files, and push.")
         return
-    verify_private_checkout(repo, library_dir)
-    git(library_dir, "fetch", "origin")
-    ahead, behind = ahead_behind(library_dir)
+    if remote["state"] in {"remote-unreachable", "remote-unverified"}:
+        fail(f"Sync stopped because remote status is {remote['state']}: {remote['error']}")
+    ahead, behind = remote["ahead"], remote["behind"]
     if behind and (ahead or worktree_dirty(library_dir)):
         fail("Remote and local changes require review. No merge or conflict resolution was attempted.")
     if behind:
@@ -1167,6 +1275,13 @@ def command_status(args: argparse.Namespace) -> None:
         "changes": None,
         "pending_skill_changes": [],
         "pending_sync": False,
+        "remote": {
+            "state": None,
+            "ahead": 0,
+            "behind": 0,
+            "skill_changes": [],
+            "error": None,
+        },
         "machine": machine,
         "fleet": {
             "configured": fleet is not None,
@@ -1183,7 +1298,8 @@ def command_status(args: argparse.Namespace) -> None:
     if data["git_repository"]:
         data["changes"] = git(library_dir, "status", "--short").stdout.splitlines()
         data["pending_skill_changes"] = changed_skill_names(data["changes"])
-        data["pending_sync"] = bool(data["changes"])
+        data["remote"] = private_remote_status(library_dir)
+        data["pending_sync"] = bool(data["changes"]) or data["remote"]["behind"] > 0
     if args.json:
         print(json.dumps(data, indent=2))
         return
@@ -1206,11 +1322,26 @@ def command_status(args: argparse.Namespace) -> None:
         say(f"Pending private skill sync: {len(data['pending_skill_changes'])}")
         for name in data["pending_skill_changes"]:
             say(f"- {name}")
-        say("Sync preview: review and approve the proposed private-library publish before applying.")
     elif data["changes"]:
         say(f"Pending private-library sync changes: {len(data['changes'])}")
-        say("Sync preview: review and approve the proposed private-library publish before applying.")
-    else:
+    if data["remote"]["state"] == "update-available":
+        say(f"Remote private-library updates: {data['remote']['behind']} commit(s) available")
+        if data["remote"]["skill_changes"]:
+            say(f"Remote private skill sync: {len(data['remote']['skill_changes'])}")
+            for name in data["remote"]["skill_changes"]:
+                say(f"- {name}")
+        else:
+            say("Remote update contains library metadata but no skill file changes.")
+    elif data["remote"]["state"] in {"local-ahead", "diverged"}:
+        say(
+            f"Remote history state: {data['remote']['state']} "
+            f"(ahead {data['remote']['ahead']}, behind {data['remote']['behind']})"
+        )
+    elif data["remote"]["state"] in {"remote-unreachable", "remote-unverified"}:
+        say(f"Remote private-library status: {data['remote']['state']} ({data['remote']['error']})")
+    if data["pending_sync"]:
+        say("Sync preview: review and approve the proposed private-library fast-forward or publish before applying.")
+    elif data["remote"]["state"] == "current":
         say("Pending private skill sync: 0")
 
 
