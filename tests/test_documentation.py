@@ -55,6 +55,7 @@ POSITIONING_MARKERS = {
         "same desired skills state",
         "checks the manager repository for updates",
         "machines do not need SSH access to one another.",
+        "check GitHub reachability before login",
     ],
     ROOT / "docs" / "README.zh-CN.md": [
         "个人 Agent skills 的生命周期管理器。",
@@ -66,6 +67,7 @@ POSITIONING_MARKERS = {
         "同一份“想拥有的 skills”状态",
         "管理器仓库更新",
         "机器之间不需要 SSH 互通。",
+        "先检查 GitHub 是否可达",
     ],
     ROOT / "docs" / "README.ja.md": [
         "個人 Agent skills のライフサイクル管理。",
@@ -77,6 +79,7 @@ POSITIONING_MARKERS = {
         "同じ「必要な skills」の状態",
         "マネージャーの更新を確認",
         "マシン同士の SSH 接続は必要ありません。",
+        "GitHub の到達性をログイン前に確認",
     ],
 }
 INTERNAL_CLI_MARKERS = [
@@ -171,6 +174,7 @@ class DocumentationTests(unittest.TestCase):
             "Full local scan",
             "does not require GitHub CLI login",
             "FETCH_HEAD",
+            "Before GitHub-dependent work",
         ]:
             self.assertIn(marker, text)
 

@@ -55,7 +55,7 @@ Send the repository URL to an Agent that can access your filesystem and GitHub, 
 
 > Read `skills/manage-my-skills/SKILL.md` in this repository. Detect reusable workflows that should create or update personal skills. Keep my personal skills privately synchronized and my open-source skills installed from their canonical sources across all machines. Preview every change and tell me when approval is required.
 
-The Agent should handle environment checks, GitHub access, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. It should tell you clearly when authentication or approval is required.
+The Agent should handle environment checks, GitHub access, private-repository verification, sensitive-content scanning, installation, synchronization, and validation. It should check GitHub reachability before login, and point you to a proxy or approved network access when GitHub is unavailable.
 
 ## A Different Layer From Installers
 

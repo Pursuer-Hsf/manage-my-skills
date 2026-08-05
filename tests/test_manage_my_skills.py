@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
@@ -179,6 +180,32 @@ class ManagerTests(unittest.TestCase):
         self.assertTrue(info["isPrivate"])
         command = execute.call_args.args[0]
         self.assertEqual(command[-1], "nameWithOwner,isPrivate")
+
+    def test_run_reports_timeout_without_hanging(self):
+        with mock.patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(["git", "fetch"], 10)):
+            result = manager.run(["git", "fetch"], check=False, timeout=10)
+        self.assertEqual(result.returncode, 124)
+        self.assertIn("timed out after 10 seconds", result.stderr)
+
+    def test_github_network_check_reports_proxy_guidance(self):
+        with mock.patch.object(manager.urllib.request, "getproxies", return_value={}), mock.patch.object(
+            manager.urllib.request, "urlopen", side_effect=urllib.error.URLError("network timeout")
+        ):
+            ok, detail = manager.github_network_check()
+        self.assertFalse(ok)
+        self.assertIn("No proxy was detected", detail)
+        self.assertIn("request network access", detail)
+
+    def test_github_network_check_does_not_expose_proxy_value(self):
+        response = mock.MagicMock()
+        response.status = 200
+        with mock.patch.object(
+            manager.urllib.request, "getproxies", return_value={"https": "http://proxy.example.invalid:8080"}
+        ), mock.patch.object(manager.urllib.request, "urlopen", return_value=response):
+            ok, detail = manager.github_network_check()
+        self.assertTrue(ok)
+        self.assertIn("configured proxy", detail)
+        self.assertNotIn("proxy.example.invalid", detail)
 
     def test_manager_status_detects_and_applies_fast_forward_update(self):
         with tempfile.TemporaryDirectory() as tmp:

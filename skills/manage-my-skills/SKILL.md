@@ -20,6 +20,8 @@ For a capture-only suggestion, do not interrupt the current task with a network 
 If the update check cannot reach the remote, report that the version is unverified and continue only with work that does not depend on a manager update. Never describe a failed check as current.
 
 `manager-status` checks the public manager through Git; it does not require GitHub CLI login. Keep that result separate from `doctor`'s private-library authentication check. If local Git metadata cannot be refreshed, report the version as unverified and name the metadata or network issue only when it was directly observed. Never infer a read-only `FETCH_HEAD` or missing GitHub login from an unrelated fetch failure.
+Remote version and GitHub authentication checks use a bounded timeout. A timeout is a network-unavailable result, not proof that the credentials or repository are invalid.
+Before GitHub-dependent work, check GitHub network reachability. If it fails, report whether a proxy was detected, suggest configuring a proxy or requesting network access, and do not label the user as unauthenticated until connectivity is available.
 
 ## Report Counts Without Mixing Scopes
 

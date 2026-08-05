@@ -17,6 +17,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
+import urllib.error
+import urllib.request
 from urllib.parse import urlparse
 
 
@@ -28,6 +30,7 @@ SCHEMA_VERSION = LIBRARY_SCHEMA_VERSION
 STATE_HOME = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 STATE_PATH = STATE_HOME / "manage-my-skills" / "state.json"
 DEFAULT_MANAGER_DIR = Path(__file__).resolve().parents[3]
+NETWORK_CHECK_TIMEOUT_SECONDS = 10
 MANIFEST_NAME = "library.json"
 FLEET_NAME = "fleet.json"
 DEFAULT_TARGET_ROOT = Path.home() / ".codex" / "skills"
@@ -73,19 +76,48 @@ def run(
     cwd: Path | None = None,
     check: bool = True,
     capture: bool = True,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
-        list(args),
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.PIPE if capture else None,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            list(args),
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE if capture else None,
+            stderr=subprocess.PIPE if capture else None,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        detail = f"command timed out after {timeout:g} seconds" if timeout is not None else "command timed out"
+        if check:
+            fail(f"Command timed out: {' '.join(args)}\n{detail}")
+        return subprocess.CompletedProcess(list(args), 124, "", detail)
     if check and result.returncode:
         detail = (result.stderr or result.stdout or "command failed").strip()
         fail(f"Command failed: {' '.join(args)}\n{detail}")
     return result
+
+
+def github_network_check() -> tuple[bool, str]:
+    proxies = urllib.request.getproxies()
+    proxy_configured = any(key in proxies for key in ("http", "https", "all"))
+    route = "a configured proxy" if proxy_configured else "a direct connection"
+    request = urllib.request.Request("https://github.com/", method="HEAD")
+    try:
+        with urllib.request.urlopen(request, timeout=NETWORK_CHECK_TIMEOUT_SECONDS) as response:
+            status = getattr(response, "status", None) or response.getcode()
+        return True, f"reachable via {route} (HTTP {status})"
+    except urllib.error.HTTPError as exc:
+        return True, f"reachable via {route} (HTTP {exc.code})"
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        reason = getattr(exc, "reason", exc)
+        detail = str(reason).strip() or exc.__class__.__name__
+        if proxy_configured:
+            suggestion = "A proxy is configured; verify that it can reach github.com."
+        else:
+            suggestion = "No proxy was detected; configure HTTPS_PROXY or ALL_PROXY, or ask the Agent to request network access."
+        return False, f"unreachable ({detail}). {suggestion}"
 
 
 def utc_now() -> str:
@@ -360,6 +392,9 @@ def add_user_local_bin_to_path(home: Path | None = None) -> None:
 
 def require_gh_auth() -> None:
     require_tool("gh")
+    network_ok, network_detail = github_network_check()
+    if not network_ok:
+        fail(f"GitHub network is unavailable: {network_detail}")
     ok, detail = github_auth_check()
     if ok:
         return
@@ -369,7 +404,11 @@ def require_gh_auth() -> None:
 
 
 def github_auth_check() -> tuple[bool, str]:
-    result = run(["gh", "auth", "status", "--hostname", "github.com"], check=False)
+    result = run(
+        ["gh", "auth", "status", "--hostname", "github.com"],
+        check=False,
+        timeout=NETWORK_CHECK_TIMEOUT_SECONDS,
+    )
     if result.returncode == 0:
         return True, "authenticated"
     output = f"{result.stdout}\n{result.stderr}".lower()
@@ -426,6 +465,11 @@ def github_repository_from_remote(remote: str) -> str | None:
         return canonical_repository_slug(f"{owner}/{name}")
     except ManagerError:
         return None
+
+
+def github_https_remote(remote: str) -> bool:
+    parsed = urlparse(remote.strip())
+    return parsed.scheme in {"http", "https"} and (parsed.hostname or "").casefold() == "github.com"
 
 
 def assert_checkout_matches_repository(library_dir: Path, repo: str) -> None:
@@ -525,8 +569,13 @@ def ensure_library_files(library_dir: Path, repo: str) -> None:
         keep.touch()
 
 
-def git(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return run(["git", *args], cwd=cwd, check=check)
+def git(
+    cwd: Path,
+    *args: str,
+    check: bool = True,
+    timeout: float | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return run(["git", *args], cwd=cwd, check=check, timeout=timeout)
 
 
 def git_commit_if_needed(library_dir: Path, message: str) -> bool:
@@ -949,6 +998,19 @@ def manager_update_status(repo_dir: Path) -> dict:
     branch = branch_result.stdout.strip()
     local = git(repo_dir, "rev-parse", "HEAD").stdout.strip()
     remote_ref = f"refs/remotes/origin/{branch}"
+    origin = git(repo_dir, "remote", "get-url", "origin", check=False)
+    if origin.returncode == 0 and github_https_remote(origin.stdout):
+        network_ok, network_detail = github_network_check()
+        if not network_ok:
+            return {
+                "manager_dir": str(repo_dir),
+                "branch": branch,
+                "state": "remote-unreachable",
+                "local_commit": local,
+                "remote_commit": None,
+                "remote_ref": remote_ref,
+                "error": f"GitHub network check failed: {network_detail}",
+            }
     fetch = git(
         repo_dir,
         "fetch",
@@ -957,9 +1019,18 @@ def manager_update_status(repo_dir: Path) -> dict:
         "origin",
         f"refs/heads/{branch}:{remote_ref}",
         check=False,
+        timeout=NETWORK_CHECK_TIMEOUT_SECONDS,
     )
     if fetch.returncode:
-        probe = git(repo_dir, "ls-remote", "--refs", "origin", f"refs/heads/{branch}", check=False)
+        probe = git(
+            repo_dir,
+            "ls-remote",
+            "--refs",
+            "origin",
+            f"refs/heads/{branch}",
+            check=False,
+            timeout=NETWORK_CHECK_TIMEOUT_SECONDS,
+        )
         if probe.returncode:
             detail = (probe.stderr or probe.stdout or fetch.stderr or fetch.stdout or "remote check failed").strip()
             return {
@@ -1220,11 +1291,16 @@ def command_doctor(args: argparse.Namespace) -> None:
     for tool in ("git", "gh"):
         path = shutil.which(tool)
         checks.append((tool, bool(path), path or "not found"))
+    network_ok, network_detail = github_network_check()
+    checks.append(("github-network", network_ok, network_detail))
     gh_ok = False
     if shutil.which("gh"):
-        gh_ok, detail = github_auth_check()
-        if detail == "not authenticated":
-            detail = "not authenticated; run: gh auth login -h github.com"
+        if network_ok:
+            gh_ok, detail = github_auth_check()
+            if detail == "not authenticated":
+                detail = "not authenticated; run: gh auth login -h github.com"
+        else:
+            detail = "not checked because GitHub network is unavailable"
         checks.append(("github-login", gh_ok, detail))
     state_path = Path(args.state_file).expanduser()
     state = load_state(state_path)
