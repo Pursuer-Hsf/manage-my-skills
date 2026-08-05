@@ -360,9 +360,22 @@ def add_user_local_bin_to_path(home: Path | None = None) -> None:
 
 def require_gh_auth() -> None:
     require_tool("gh")
-    result = run(["gh", "auth", "status", "--hostname", "github.com"], check=False)
-    if result.returncode:
+    ok, detail = github_auth_check()
+    if ok:
+        return
+    if detail == "not authenticated":
         fail("GitHub CLI is not logged in. Run: gh auth login -h github.com")
+    fail(f"GitHub CLI authentication check unavailable: {detail}")
+
+
+def github_auth_check() -> tuple[bool, str]:
+    result = run(["gh", "auth", "status", "--hostname", "github.com"], check=False)
+    if result.returncode == 0:
+        return True, "authenticated"
+    output = f"{result.stdout}\n{result.stderr}".lower()
+    if any(marker in output for marker in ("not logged in", "not authenticated", "no accounts")):
+        return False, "not authenticated"
+    return False, "authentication check unavailable; verify network access and the credential store"
 
 
 def repo_info(repo: str) -> dict | None:
@@ -934,12 +947,64 @@ def manager_update_status(repo_dir: Path) -> dict:
     if branch_result.returncode:
         fail("Manager update check requires a branch checkout, not detached HEAD")
     branch = branch_result.stdout.strip()
-    fetch = git(repo_dir, "fetch", "--quiet", "origin", branch, check=False)
-    if fetch.returncode:
-        detail = (fetch.stderr or fetch.stdout or "fetch failed").strip()
-        fail(f"Cannot check manager updates from origin/{branch}: {detail}")
     local = git(repo_dir, "rev-parse", "HEAD").stdout.strip()
-    remote = git(repo_dir, "rev-parse", "FETCH_HEAD").stdout.strip()
+    remote_ref = f"refs/remotes/origin/{branch}"
+    fetch = git(
+        repo_dir,
+        "fetch",
+        "--quiet",
+        "--no-write-fetch-head",
+        "origin",
+        f"refs/heads/{branch}:{remote_ref}",
+        check=False,
+    )
+    if fetch.returncode:
+        probe = git(repo_dir, "ls-remote", "--refs", "origin", f"refs/heads/{branch}", check=False)
+        if probe.returncode:
+            detail = (probe.stderr or probe.stdout or fetch.stderr or fetch.stdout or "remote check failed").strip()
+            return {
+                "manager_dir": str(repo_dir),
+                "branch": branch,
+                "state": "remote-unreachable",
+                "local_commit": local,
+                "remote_commit": None,
+                "remote_ref": remote_ref,
+                "error": f"Cannot reach origin/{branch}: {detail}",
+            }
+        remote_lines = [line.split() for line in probe.stdout.splitlines() if line.split()]
+        if not remote_lines or len(remote_lines[0]) < 1:
+            return {
+                "manager_dir": str(repo_dir),
+                "branch": branch,
+                "state": "remote-unverified",
+                "local_commit": local,
+                "remote_commit": None,
+                "remote_ref": remote_ref,
+                "error": "Remote responded without a branch commit; version is unverified.",
+            }
+        remote = remote_lines[0][0]
+        state = "current" if local == remote else "remote-unverified"
+        return {
+            "manager_dir": str(repo_dir),
+            "branch": branch,
+            "state": state,
+            "local_commit": local,
+            "remote_commit": remote,
+            "remote_ref": remote_ref,
+            "error": None if state == "current" else "Remote is reachable, but local Git history could not be refreshed; version is unverified.",
+        }
+    remote_result = git(repo_dir, "rev-parse", remote_ref, check=False)
+    if remote_result.returncode:
+        return {
+            "manager_dir": str(repo_dir),
+            "branch": branch,
+            "state": "remote-unverified",
+            "local_commit": local,
+            "remote_commit": None,
+            "remote_ref": remote_ref,
+            "error": "Remote fetch completed but its local tracking ref could not be read; version is unverified.",
+        }
+    remote = remote_result.stdout.strip()
     if local == remote:
         state = "current"
     elif git(repo_dir, "merge-base", "--is-ancestor", local, remote, check=False).returncode == 0:
@@ -954,6 +1019,8 @@ def manager_update_status(repo_dir: Path) -> dict:
         "state": state,
         "local_commit": local,
         "remote_commit": remote,
+        "remote_ref": remote_ref,
+        "error": None,
     }
 
 
@@ -1155,9 +1222,10 @@ def command_doctor(args: argparse.Namespace) -> None:
         checks.append((tool, bool(path), path or "not found"))
     gh_ok = False
     if shutil.which("gh"):
-        result = run(["gh", "auth", "status", "--hostname", "github.com"], check=False)
-        gh_ok = result.returncode == 0
-        checks.append(("github-login", gh_ok, "authenticated" if gh_ok else "run: gh auth login -h github.com"))
+        gh_ok, detail = github_auth_check()
+        if detail == "not authenticated":
+            detail = "not authenticated; run: gh auth login -h github.com"
+        checks.append(("github-login", gh_ok, detail))
     state_path = Path(args.state_file).expanduser()
     state = load_state(state_path)
     checks.append(("state", bool(state.get("private_repo")), str(state_path)))
@@ -1184,6 +1252,10 @@ def command_manager_status(args: argparse.Namespace) -> None:
         say("A fast-forward manager update is available.")
     elif status["state"] in {"local-ahead", "diverged"}:
         say("Automatic manager update is blocked until the Git history is reviewed.")
+    elif status["state"] == "remote-unverified":
+        say(status["error"] or "Remote version is unverified.")
+    elif status["state"] == "remote-unreachable":
+        say(status["error"] or "Remote version could not be checked.")
 
 
 def command_update_manager(args: argparse.Namespace) -> None:
@@ -1192,6 +1264,8 @@ def command_update_manager(args: argparse.Namespace) -> None:
     if status["state"] == "current":
         say("Manager is already current. Private skills were not modified.")
         return
+    if status["state"] in {"remote-unverified", "remote-unreachable"}:
+        fail(f"Manager update stopped because remote status is {status['state']}: {status.get('error', 'version is unverified')}")
     if status["state"] != "update-available":
         fail(f"Manager update stopped because repository state is {status['state']}")
     say(f"Plan: fast-forward manager at {repo_dir} to origin/{status['branch']}")
@@ -1201,7 +1275,7 @@ def command_update_manager(args: argparse.Namespace) -> None:
         return
     if worktree_dirty(repo_dir):
         fail("Manager has local changes. Commit or review them before updating.")
-    git(repo_dir, "merge", "--ff-only", "FETCH_HEAD")
+    git(repo_dir, "merge", "--ff-only", status["remote_ref"])
     say("Manager updated. Private skills were not modified.")
 
 

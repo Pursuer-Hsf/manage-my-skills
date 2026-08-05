@@ -194,6 +194,52 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual((checkout / "version.txt").read_text(), "v2\n")
             self.assertEqual(manager.manager_update_status(checkout)["state"], "current")
 
+    def test_manager_status_does_not_require_fetch_head_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, checkout = manager_repo_pair(Path(tmp))
+            commit_version(source, "v2")
+            real_git = manager.git
+
+            def fail_fetch(cwd, *args, **kwargs):
+                if args and args[0] == "fetch":
+                    return subprocess.CompletedProcess(
+                        ["git", *args], 1, "", "FETCH_HEAD is read-only\n"
+                    )
+                return real_git(cwd, *args, **kwargs)
+
+            with mock.patch.object(manager, "git", side_effect=fail_fetch):
+                status = manager.manager_update_status(checkout)
+            self.assertEqual(status["state"], "remote-unverified")
+            self.assertIn("version is unverified", status["error"])
+
+    def test_manager_status_distinguishes_unreachable_remote(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, checkout = manager_repo_pair(Path(tmp))
+            real_git = manager.git
+
+            def fail_remote_checks(cwd, *args, **kwargs):
+                if args and args[0] in {"fetch", "ls-remote"}:
+                    return subprocess.CompletedProcess(
+                        ["git", *args], 1, "", "network timeout\n"
+                    )
+                return real_git(cwd, *args, **kwargs)
+
+            with mock.patch.object(manager, "git", side_effect=fail_remote_checks):
+                status = manager.manager_update_status(checkout)
+            self.assertEqual(status["state"], "remote-unreachable")
+            self.assertIn("Cannot reach", status["error"])
+
+    def test_github_auth_check_distinguishes_missing_login_from_unavailable_check(self):
+        missing = subprocess.CompletedProcess([], 1, "", "not logged in to github.com\n")
+        with mock.patch.object(manager, "run", return_value=missing):
+            self.assertEqual(manager.github_auth_check(), (False, "not authenticated"))
+
+        unavailable = subprocess.CompletedProcess([], 1, "", "network timeout\n")
+        with mock.patch.object(manager, "run", return_value=unavailable):
+            ok, detail = manager.github_auth_check()
+            self.assertFalse(ok)
+            self.assertIn("unavailable", detail)
+
     def test_manager_update_stops_when_local_history_is_ahead(self):
         with tempfile.TemporaryDirectory() as tmp:
             _, checkout = manager_repo_pair(Path(tmp))

@@ -169,6 +169,8 @@ class DocumentationTests(unittest.TestCase):
             "Private-library managed skills",
             "Source inventory records",
             "Full local scan",
+            "does not require GitHub CLI login",
+            "FETCH_HEAD",
         ]:
             self.assertIn(marker, text)
 
