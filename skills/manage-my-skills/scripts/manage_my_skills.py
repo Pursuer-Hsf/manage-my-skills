@@ -1015,7 +1015,6 @@ def manager_update_status(repo_dir: Path) -> dict:
         repo_dir,
         "fetch",
         "--quiet",
-        "--no-write-fetch-head",
         "origin",
         f"refs/heads/{branch}:{remote_ref}",
         check=False,
