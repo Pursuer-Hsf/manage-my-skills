@@ -166,6 +166,9 @@ class DocumentationTests(unittest.TestCase):
             "re-read this `SKILL.md`",
             "Update this public manager only by fast-forward.",
             "not as a background daemon",
+            "Private-library managed skills",
+            "Source inventory records",
+            "Full local scan",
         ]:
             self.assertIn(marker, text)
 

@@ -340,7 +340,7 @@ def command_scan(args: argparse.Namespace) -> None:
     if args.json:
         print(json.dumps({"roots": [str(p) for p in roots], "skills": [asdict(x) for x in records]}, indent=2))
         return
-    say(f"Found {len(records)} skills in {len(roots)} roots:")
+    say(f"Full local scan: found {len(records)} skills in {len(roots)} roots:")
     for item in records:
         link = " -> link" if item.linked else ""
         say(f"- {item.name} [{item.source}]{link}: {item.path}")
@@ -1033,8 +1033,8 @@ def command_status(args: argparse.Namespace) -> None:
         return
     say(f"Private repository: {repo}")
     say(f"Local library: {library_dir} ({'ready' if data['git_repository'] else 'not ready'})")
-    say(f"Backed-up skills: {len(data['skills'])}")
-    say(f"Source-managed skills: {len(data['sources'])}")
+    say(f"Private-library managed skills: {len(data['skills'])}")
+    say(f"Source inventory records: {len(data['sources'])}")
     if machine:
         say(f"Current machine: {machine['label']} ({machine['id']})")
     else:

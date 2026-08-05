@@ -77,6 +77,36 @@ class ManagerTests(unittest.TestCase):
             self.assertEqual([item.name for item in records], ["alpha"])
             self.assertEqual(records[0].source, "shared-local")
 
+    def test_human_reports_keep_private_and_full_scan_counts_separate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            library = base / "library"
+            state = base / "state.json"
+            manager.ensure_library_files(library, "OWNER/my-skills")
+            write_skill(library / "skills" / "alpha")
+            initialize_library_checkout(library)
+            manager.write_json(state, {
+                "schema_version": manager.STATE_SCHEMA_VERSION,
+                "private_repo": "OWNER/my-skills",
+                "library_dir": str(library),
+            })
+
+            status_output = io.StringIO()
+            with redirect_stdout(status_output):
+                self.assertEqual(manager.main(["status", "--state-file", str(state)]), 0)
+            self.assertIn("Private-library managed skills: 1", status_output.getvalue())
+            self.assertIn("Source inventory records: 0", status_output.getvalue())
+
+            scan_root = base / "scan-root"
+            write_skill(scan_root / "beta")
+            scan_output = io.StringIO()
+            with redirect_stdout(scan_output):
+                self.assertEqual(
+                    manager.main(["scan", "--root", str(scan_root)]),
+                    0,
+                )
+            self.assertIn("Full local scan: found 1 skills in 1 roots", scan_output.getvalue())
+
     def test_setup_preview_does_not_create_library_or_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
